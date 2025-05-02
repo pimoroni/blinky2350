@@ -8,7 +8,6 @@ MP_DEFINE_CONST_FUN_OBJ_2(Blinky_update_obj, Blinky_update);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_set_brightness_obj, Blinky_set_brightness);
 MP_DEFINE_CONST_FUN_OBJ_1(Blinky_get_brightness_obj, Blinky_get_brightness);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_adjust_brightness_obj, Blinky_adjust_brightness);
-MP_DEFINE_CONST_FUN_OBJ_1(Blinky_light_obj, Blinky_light);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_is_pressed_obj, Blinky_is_pressed);
 
 /***** Binding of Methods *****/
