@@ -47,6 +47,9 @@ include(modules/duo75/micropython)
 else()
 include(hub75/micropython)
 endif()
+if("${PICO_BOARD}" STREQUAL "pimoroni_blinky2350")
+include(modules/blinky/micropython)
+endif()
 
 # Servos & Motors
 include(pwm/micropython)

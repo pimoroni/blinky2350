@@ -14,10 +14,6 @@ jobs:
     strategy:
       matrix:
         include:
-        - name: i75_rp2040
-        - name: i75w_rp2040
-        - name: i75w_rp2350
-        - name: i75_duo
         - name: blinky
 
     env:
