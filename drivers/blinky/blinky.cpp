@@ -65,10 +65,18 @@ namespace pimoroni {
     // Stop the bitstream SM
     pio_sm_set_enabled(bitstream_pio, bitstream_sm, false);
 
-    // Make sure the display is off
+    // Make sure the display is off by turning off the column drivers
     const uint pins_to_set = 1 << COLUMN_BLANK;
     pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
 
+    // Clock out data to turn off the row drivers
+    gpio_put(ROW_DATA, false);
+    for(int i = 0; i < 26; i++) {
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, true);
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, false);
+    }
 
     dma_hw->ch[dma_ctrl_channel].al1_ctrl = (dma_hw->ch[dma_ctrl_channel].al1_ctrl & ~DMA_CH0_CTRL_TRIG_CHAIN_TO_BITS) | (dma_ctrl_channel << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB);
     dma_hw->ch[dma_channel].al1_ctrl = (dma_hw->ch[dma_channel].al1_ctrl & ~DMA_CH0_CTRL_TRIG_CHAIN_TO_BITS) | (dma_channel << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB);
@@ -98,13 +106,13 @@ namespace pimoroni {
 
 
     // initialise the bcd timing values and row selects in the bitstream
-    for(uint8_t row = 0; row < 16; row++) {
+    for(uint8_t row = 0; row < 26; row++) {
       for(uint8_t frame = 0; frame < BCD_FRAME_COUNT; frame++) {
         // find the offset of this row and frame in the bitstream
         uint8_t *p = &bitstream[row * ROW_BYTES + (BCD_FRAME_BYTES * frame)];
 
         p[ 0] = 16 - 1;               // row pixel count
-        p[ 1] = row;                  // row select
+        p[ 1] = 16 - 1;                  // row select
 
         // set the number of bcd ticks for this frame
         uint32_t bcd_ticks = (1 << frame);
@@ -126,6 +134,24 @@ namespace pimoroni {
     gpio_init(ROW_REG_CLOCK); gpio_set_dir(ROW_REG_CLOCK, GPIO_OUT); gpio_put(ROW_REG_CLOCK, true);
 
     sleep_ms(100);
+
+    // Clock out data to turn off the row drivers
+    gpio_put(ROW_DATA, false);
+    for(int i = 0; i < 26; i++) {
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, true);
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, false);
+    }
+
+    // Test
+    gpio_put(ROW_DATA, true);
+    for(int i = 0; i < 1; i++) {
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, true);
+      sleep_us(10);
+      gpio_put(ROW_DATA_CLOCK, false);
+    }
 
     // configure full output current in register 2
 
@@ -194,22 +220,20 @@ namespace pimoroni {
 
     pio_gpio_init(bitstream_pio, ROW_DATA);
     pio_gpio_init(bitstream_pio, ROW_DATA_CLOCK);
-    pio_gpio_init(bitstream_pio, ROW_REG_CLOCK);
 
     // set the blank and row pins to be high, then set all led driving pins as outputs.
     // This order is important to avoid a momentary flash
     const uint pins_to_set = 1 << COLUMN_BLANK;
     pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
-    pio_sm_set_consecutive_pindirs(bitstream_pio, bitstream_sm, COLUMN_CLOCK, 8, true);
+    pio_sm_set_consecutive_pindirs(bitstream_pio, bitstream_sm, COLUMN_CLOCK, 6, true);
 
     pio_sm_config c = blinky_program_get_default_config(bitstream_sm_offset);
 
     // osr shifts right, autopull on, autopull threshold 8
     sm_config_set_out_shift(&c, true, true, 32);
 
-    // configure out, set, and sideset pins
-    //sm_config_set_out_pins(&c, ROW_BIT_0, 4);
-    sm_config_set_set_pins(&c, COLUMN_DATA, 3);
+    // configure set and sideset pins
+    sm_config_set_set_pins(&c, COLUMN_DATA, 5);
     sm_config_set_sideset_pins(&c, COLUMN_CLOCK);
 
     // join fifos as only tx needed (gives 8 deep fifo instead of 4)
