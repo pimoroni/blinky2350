@@ -65,8 +65,8 @@ namespace pimoroni {
     // Stop the bitstream SM
     pio_sm_set_enabled(bitstream_pio, bitstream_sm, false);
 
-    // Make sure the display is off and switch it to an invisible row, to be safe
-    const uint pins_to_set = 1 << COLUMN_BLANK | 0b1111 << ROW_BIT_0;
+    // Make sure the display is off
+    const uint pins_to_set = 1 << COLUMN_BLANK;
     pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
 
 
@@ -122,8 +122,8 @@ namespace pimoroni {
 
     // initialise the row select, and set them to a non-visible row to avoid flashes during setup
     gpio_init(ROW_DATA); gpio_set_dir(ROW_DATA, GPIO_OUT); gpio_put(ROW_DATA, false);
-    gpio_init(ROW_DATA_CLK); gpio_set_dir(ROW_BIT_1, ROW_DATA_CLK); gpio_put(ROW_DATA_CLK, true);
-    gpio_init(ROW_REG_CLK); gpio_set_dir(ROW_BIT_2, ROW_REG_CLK); gpio_put(ROW_REG_CLK, true);
+    gpio_init(ROW_DATA_CLOCK); gpio_set_dir(ROW_DATA_CLOCK, GPIO_OUT); gpio_put(ROW_DATA_CLOCK, true);
+    gpio_init(ROW_REG_CLOCK); gpio_set_dir(ROW_REG_CLOCK, GPIO_OUT); gpio_put(ROW_REG_CLOCK, true);
 
     sleep_ms(100);
 
@@ -192,14 +192,13 @@ namespace pimoroni {
     pio_gpio_init(bitstream_pio, COLUMN_LATCH);
     pio_gpio_init(bitstream_pio, COLUMN_BLANK);
 
-    pio_gpio_init(bitstream_pio, ROW_BIT_0);
-    pio_gpio_init(bitstream_pio, ROW_BIT_1);
-    pio_gpio_init(bitstream_pio, ROW_BIT_2);
-    pio_gpio_init(bitstream_pio, ROW_BIT_3);
+    pio_gpio_init(bitstream_pio, ROW_DATA);
+    pio_gpio_init(bitstream_pio, ROW_DATA_CLOCK);
+    pio_gpio_init(bitstream_pio, ROW_REG_CLOCK);
 
     // set the blank and row pins to be high, then set all led driving pins as outputs.
     // This order is important to avoid a momentary flash
-    const uint pins_to_set = 1 << COLUMN_BLANK | 0b1111 << ROW_BIT_0;
+    const uint pins_to_set = 1 << COLUMN_BLANK;
     pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
     pio_sm_set_consecutive_pindirs(bitstream_pio, bitstream_sm, COLUMN_CLOCK, 8, true);
 
@@ -209,7 +208,7 @@ namespace pimoroni {
     sm_config_set_out_shift(&c, true, true, 32);
 
     // configure out, set, and sideset pins
-    sm_config_set_out_pins(&c, ROW_BIT_0, 4);
+    //sm_config_set_out_pins(&c, ROW_BIT_0, 4);
     sm_config_set_set_pins(&c, COLUMN_DATA, 3);
     sm_config_set_sideset_pins(&c, COLUMN_CLOCK);
 
@@ -312,7 +311,7 @@ namespace pimoroni {
 
       uint8_t value_bit = gamma_v & 0b1;
 
-      *p = (value_bit << 0) | (green_bit << 1) | (red_bit << 2);
+      *p = (value_bit << 0);
 
       gamma_v >>= 1;
     }
@@ -344,8 +343,6 @@ namespace pimoroni {
           for(int x = 0; x < 16; x++) {
             uint32_t col = *p;
             uint8_t r = (col & 0xff0000) >> 16;
-            uint8_t g = (col & 0x00ff00) >>  8;
-            uint8_t b = (col & 0x0000ff) >>  0;
             p++;
 
             set_pixel(x, y, r);
@@ -358,8 +355,6 @@ namespace pimoroni {
           for(int x = 0; x < 16; x++) {
             uint16_t col = __builtin_bswap16(*p);
             uint8_t r = (col & 0b1111100000000000) >> 8;
-            uint8_t g = (col & 0b0000011111100000) >> 3;
-            uint8_t b = (col & 0b0000000000011111) << 3;
             p++;
 
             set_pixel(x, y, r);
@@ -376,8 +371,6 @@ namespace pimoroni {
 
             uint32_t col = *p;
             uint8_t r = (col & 0xff0000) >> 16;
-            uint8_t g = (col & 0x00ff00) >>  8;
-            uint8_t b = (col & 0x0000ff) >>  0;
 
             set_pixel(x, y, r);
             offset++;
