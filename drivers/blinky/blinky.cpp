@@ -96,9 +96,9 @@ namespace pimoroni {
                 
     // for each row:
     //   for each bcd frame:
-    //            0: 00000001                                     // row is first
+    //            0: 00001111                                     // row data & clock
     //            1: 00011111                                     // row pixel count (minus one)
-    //      2  - 40: xxxxxxxv, xxxxxxxv, xxxxxxxv, ...            // pixel data (14 bit bcd)
+    //      2  - 40: xxxxxxxv, xxxxxxxv, xxxxxxxv, ...            // pixel data)
     //      41 - 43: xxxxxxxx, xxxxxxxx, xxxxxxxx                 // dummy bytes to dword align
     //      44 - 47: tttttttt, tttttttt, tttttttt, tttttttt       // bcd tick count (0-65536)
     //
@@ -111,8 +111,16 @@ namespace pimoroni {
         // find the offset of this row and frame in the bitstream
         uint8_t *p = &bitstream[(row * ROW_BYTES) + (BCD_FRAME_BYTES * frame)];
 
-        p[ 0] = row == 0;                       // row is first
-        p[ 1] = 39 - 1;                  // row pixel count
+        if(frame == 0) {
+          if(row == 0)
+            p[ 0] = 0b1101;  // row data high, toggle clock low, then high
+          else
+            p[ 0] = 0b1000;  // row data low, toggle clock low, then high
+        }
+        else {
+          p[ 0] = 0b0000;    // row data low, clock low
+        }
+        p[ 1] = WIDTH - 1;                  // row pixel count
 
         // set the number of bcd ticks for this frame
         uint32_t bcd_ticks = (1 << frame);
@@ -138,15 +146,6 @@ namespace pimoroni {
     // Clock out data to turn off the row drivers
     gpio_put(ROW_DATA, false);
     for(uint32_t i = 0; i < ROW_COUNT; i++) {
-      sleep_us(10);
-      gpio_put(ROW_DATA_CLOCK, true);
-      sleep_us(10);
-      gpio_put(ROW_DATA_CLOCK, false);
-    }
-
-    // Test
-    gpio_put(ROW_DATA, true);
-    for(uint32_t i = 0; i < 1; i++) {
       sleep_us(10);
       gpio_put(ROW_DATA_CLOCK, true);
       sleep_us(10);
@@ -232,8 +231,9 @@ namespace pimoroni {
     // osr shifts right, autopull on, autopull threshold 8
     sm_config_set_out_shift(&c, true, true, 32);
 
-    // configure set and sideset pins
-    sm_config_set_set_pins(&c, COLUMN_DATA, 5);
+    // configure out, set, and sideset pins
+    sm_config_set_out_pins(&c, ROW_DATA, 3);
+    sm_config_set_set_pins(&c, COLUMN_DATA, 3);
     sm_config_set_sideset_pins(&c, COLUMN_CLOCK);
 
     // join fifos as only tx needed (gives 8 deep fifo instead of 4)

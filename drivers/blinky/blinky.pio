@@ -33,28 +33,19 @@
 
 .wrap_target
 
-    out x, 1              ; pull in row data bit from OSR into register x
-    jmp !x row_bit_zero             ; if bit was zero jump
-    set pins, 0b11100               ; clear row data bit, set row clock
-    set pins, 0b01100               ; clear row data bit, clear row clock
-    jmp row_bit_end
-  row_bit_zero:
-    set pins, 0b10100               ; clear row data bit, set row clock
-    set pins, 0b00100               ; clear row data bit, clear row clock
-  row_bit_end:
-    out null, 7                     ; discard the five dummy bits for this pixel
+    out pins, 2 [2]                     ; output row select
+    out pins, 2 [2]                     ; output row select
+    out null, 4                     ; discard the four dummy bits for this pixel
 
     out y, 8                        ; get row pixel count (minus 1 because test is pre decrement)
 pixels:
     ; bit
-    out x, 1       side 0  [1]      ; pull in blue bit from OSR into register x, clear clock
-    jmp !x bit_zero                  ; if bit was zero jump
-    set pins, 0b01101               ; set data bit, blank high
-    jmp bit_end
-  bit_zero:
-    set pins, 0b01100               ; clear data bit, blank high
+    out x, 1       side 0  [1]       ; pull in red bit from OSR into register X, clear clock
+    set pins, 0b100               ; clear data bit, blank high
+    jmp !x bit_end                   ; if bit was zero jump
+    set pins, 0b101               ; set data bit, blank high
   bit_end:
-    out null, 7     side 1 [2]     ; clock in bit
+    out null, 7             side 1 [2]     ; clock in bit
 
     ;out null, 7    side 0         ; discard the five dummy bits for this pixel
 
@@ -62,14 +53,14 @@ pixels:
 
   out null, 24                      ; discard dummy bytes
 
-  set pins, 0b01110 [5]             ; latch high, blank high
-  set pins, 0b01000                 ; blank low (enable output)
+  set pins, 0b110 [5]             ; latch high, blank high
+  set pins, 0b000                 ; blank low (enable output)
 
 ; loop over bcd delay period
   out y, 32                       ; get bcd delay counter value
 bcd_delay:
   jmp y-- bcd_delay
 
-  set pins 0b01100                  ; blank high (disable output)
+  set pins 0b100                  ; blank high (disable output)
 
 .wrap
