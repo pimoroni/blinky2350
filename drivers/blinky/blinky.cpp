@@ -316,7 +316,7 @@ namespace pimoroni {
 
     // make those coordinates sane
     x = (WIDTH - 1) - x;
-    y = (HEIGHT - 1) - y;
+    //y = (HEIGHT - 1) - y;
 
     v = (v * this->brightness) >> 8;
 
