@@ -318,9 +318,11 @@ namespace pimoroni {
     x = (WIDTH - 1) - x;
     //y = (HEIGHT - 1) - y;
 
-    v = (v * this->brightness) >> 8;
+    //v = (v * this->brightness) >> 8;
+    //uint32_t gamma_v = (uint32_t)GAMMA_14BIT[v];
 
-    uint16_t gamma_v = GAMMA_14BIT[v];
+    uint32_t gamma_v = (uint32_t)GAMMA_14BIT[v] * this->brightness;
+    gamma_v >>= 8;
 
     // for each row:
     //   for each bcd frame:
