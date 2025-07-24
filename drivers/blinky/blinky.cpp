@@ -369,9 +369,13 @@ namespace pimoroni {
           for(uint8_t x = 0; x < WIDTH; x++) {
             uint32_t col = *p;
             uint8_t r = (col & 0xff0000) >> 16;
-            p++;
+            uint8_t g = (col & 0x00ff00) >> 8;
+            uint8_t b = (col & 0x0000ff) >> 0;
 
-            set_pixel(x, y, r);
+            // Approximate brightness of the colour, mapped to our mono display
+            uint16_t brightness = ((r + g + b) * 255) / 765;
+            set_pixel(x, y, brightness);
+            p++;
           }
         }
       }
@@ -380,29 +384,27 @@ namespace pimoroni {
         for(uint8_t y = 0; y < HEIGHT; y++) {
           for(uint8_t x = 0; x < WIDTH; x++) {
             uint16_t col = __builtin_bswap16(*p);
-            uint8_t r = (col & 0b1111100000000000) >> 8;
-            p++;
+            uint8_t r = (col & 0b1111100000000000) >> 11;
+            uint8_t g = (col & 0b0000011111100000) >> 5;
+            uint8_t b = (col & 0b0000000000011111);
 
-            set_pixel(x, y, r);
+            // Approximate brightness of the colour, mapped to our mono display
+            uint16_t brightness = ((r + g + b) * 255) / 126;
+            set_pixel(x, y, brightness);
+            p++;
           }
         }
       }
-      else if(graphics->pen_type == PicoGraphics::PEN_P8 || graphics->pen_type == PicoGraphics::PEN_P4) {
-        int offset = 0;
-        graphics->frame_convert(PicoGraphics::PEN_RGB888, [this, offset](void *data, size_t length) mutable {
-          uint32_t *p = (uint32_t *)data;
-          for(auto i = 0u; i < length / 4; i++) {
-            int x = offset % 39;
-            int y = offset / 39;
-
-            uint32_t col = *p;
-            uint8_t r = (col & 0xff0000) >> 16;
-
-            set_pixel(x, y, r);
-            offset++;
+      else if (graphics->pen_type == PicoGraphics::PEN_P8) {
+        // Just set the raw data values since Blinky is monochrome
+        // and we're using this as a the native mode
+        uint8_t *p = (uint8_t *)graphics->frame_buffer;
+        for(uint8_t y = 0; y < HEIGHT; y++) {
+          for(uint8_t x = 0; x < WIDTH; x++) {
+            set_pixel(x, y, *p);
             p++;
           }
-        });
+        }
       }
     }
   }
