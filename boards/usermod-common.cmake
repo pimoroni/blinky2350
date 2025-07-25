@@ -57,6 +57,9 @@ include(servo/micropython)
 include(encoder/micropython)
 include(motor/micropython)
 
+# Sleep / Wake Reason
+include(modules/c/powman/micropython)
+
 # Still required for version.py
 include(modules_py/modules_py)
 

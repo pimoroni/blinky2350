@@ -6,5 +6,3 @@ require("umqtt.simple")
 require("aioble")
 
 include("../manifest-common.py")
-
-freeze("../../modules/wireless/")
