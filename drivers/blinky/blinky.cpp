@@ -104,7 +104,6 @@ namespace pimoroni {
     //
     //  .. and back to the start
 
-
     // initialise the bcd timing values and row selects in the bitstream
     for(uint8_t row = 0; row < ROW_COUNT; row++) {
       for(uint8_t frame = 0; frame < BCD_FRAME_COUNT; frame++) {
@@ -131,6 +130,13 @@ namespace pimoroni {
       }
     }
 
+    gpio_init(SW_POWER_EN); gpio_set_dir(SW_POWER_EN, GPIO_OUT); gpio_put(SW_POWER_EN, true);
+    gpio_init(SWITCH_INT); gpio_set_dir(SWITCH_INT, GPIO_IN); gpio_pull_up(SWITCH_INT);
+    gpio_init(CHARGE_STAT); gpio_set_dir(CHARGE_STAT, GPIO_IN); gpio_pull_up(CHARGE_STAT);
+    gpio_init(RESET_SW); gpio_set_dir(RESET_SW, GPIO_IN);
+    gpio_init(VBUS_DETECT); gpio_set_dir(VBUS_DETECT, GPIO_IN);
+    gpio_init(RTC_ALARM); gpio_set_dir(RTC_ALARM, GPIO_IN);
+
     gpio_init(COLUMN_CLOCK); gpio_set_dir(COLUMN_CLOCK, GPIO_OUT); gpio_put(COLUMN_CLOCK, false);
     gpio_init(COLUMN_DATA); gpio_set_dir(COLUMN_DATA, GPIO_OUT); gpio_put(COLUMN_DATA, false);
     gpio_init(COLUMN_LATCH); gpio_set_dir(COLUMN_LATCH, GPIO_OUT); gpio_put(COLUMN_LATCH, false);
@@ -139,7 +145,7 @@ namespace pimoroni {
     // initialise the row select, and set them to a non-visible row to avoid flashes during setup
     gpio_init(ROW_DATA); gpio_set_dir(ROW_DATA, GPIO_OUT); gpio_put(ROW_DATA, false);
     gpio_init(ROW_DATA_CLOCK); gpio_set_dir(ROW_DATA_CLOCK, GPIO_OUT); gpio_put(ROW_DATA_CLOCK, true);
-    gpio_init(ROW_REG_CLOCK); gpio_set_dir(ROW_REG_CLOCK, GPIO_OUT); gpio_put(ROW_REG_CLOCK, true);
+    //gpio_init(ROW_REG_CLOCK); gpio_set_dir(ROW_REG_CLOCK, GPIO_OUT); gpio_put(ROW_REG_CLOCK, true);
 
     sleep_ms(100);
 
@@ -232,7 +238,7 @@ namespace pimoroni {
     sm_config_set_out_shift(&c, true, true, 32);
 
     // configure out, set, and sideset pins
-    sm_config_set_out_pins(&c, ROW_DATA, 3);
+    sm_config_set_out_pins(&c, ROW_DATA, 2);
     sm_config_set_set_pins(&c, COLUMN_DATA, 3);
     sm_config_set_sideset_pins(&c, COLUMN_CLOCK);
 
