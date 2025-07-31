@@ -20,7 +20,7 @@
 #define RASPBERRYPI_PICO2
 
 // --- RP2350 VARIANT ---
-// not PICO_RP2350A
+#define PICO_RP2350A 1
 
 // --- UART ---
 // no PICO_DEFAULT_UART
