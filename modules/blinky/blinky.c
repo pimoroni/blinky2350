@@ -25,7 +25,6 @@ static const mp_rom_map_elem_t Blinky_locals_dict_table[] = {
 static MP_DEFINE_CONST_DICT(Blinky_locals_dict, Blinky_locals_dict_table);
 
 /***** Class Definition *****/
-#ifdef MP_DEFINE_CONST_OBJ_TYPE
 MP_DEFINE_CONST_OBJ_TYPE(
     Blinky_type,
     MP_QSTR_Blinky,
@@ -34,15 +33,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
     print, Blinky_print,
     locals_dict, (mp_obj_dict_t*)&Blinky_locals_dict
 );
-#else
-const mp_obj_type_t Blinky_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_Blinky,
-    .print = Blinky_print,
-    .make_new = Blinky_make_new,
-    .locals_dict = (mp_obj_dict_t*)&Blinky_locals_dict,
-};
-#endif
 
 /***** Globals Table *****/
 static const mp_map_elem_t blinky_globals_table[] = {
@@ -56,8 +46,5 @@ const mp_obj_module_t blinky_user_cmodule = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t*)&mp_module_blinky_globals,
 };
-#if MICROPY_VERSION <= 70144
-MP_REGISTER_MODULE(MP_QSTR_blinky, blinky_user_cmodule, MODULE_BLINKY_ENABLED);
-#else
+
 MP_REGISTER_MODULE(MP_QSTR_blinky, blinky_user_cmodule);
-#endif
