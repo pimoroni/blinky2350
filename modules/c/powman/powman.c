@@ -3,6 +3,8 @@
 
 static powman_power_state off_state;
 static powman_power_state on_state;
+bool powman_wake_with_doubletap;
+uint32_t user_button_state = 0;
 
 //#define DEBUG
 
@@ -14,7 +16,12 @@ uint8_t powman_get_wake_reason(void) {
     // 4 = pwrup3 (GPIO interrupt 3)
     // 5 = coresight_pwrup
     // 6 = alarm_pwrup (timeout or alarm wakeup)
-    return powman_hw->last_swcore_pwrup & 0x7f;
+    // 7 = powman_wake_with_doubletap
+    return (powman_hw->last_swcore_pwrup & 0x7f) | (powman_wake_with_doubletap ? POWMAN_DOUBLETAP : 0);
+}
+
+uint32_t powman_get_user_switches(void) {
+    return user_button_state;
 }
 
 void powman_init() {
@@ -147,4 +154,88 @@ int powman_off_for_ms(uint64_t duration_ms) {
 
     uint64_t ms = powman_timer_get_ms();
     return powman_off_until_time(ms + duration_ms);
+}
+
+static inline bool double_tap_flag_is_set(void) {
+    return powman_hw->chip_reset & POWMAN_CHIP_RESET_DOUBLE_TAP_BITS;
+}
+
+static inline void set_double_tap_flag(void) {
+    powman_set_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
+}
+
+static inline void clear_double_tap_flag(void) {
+    powman_clear_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
+}
+
+static void __attribute__((constructor)) gpio_latch(void) {
+    // Init all button GPIOs
+    gpio_init_mask(BW_SWITCH_MASK);
+    gpio_set_dir_in_masked(BW_SWITCH_MASK);
+
+    for(int i = 0; i < 32; i++) {
+        if(BW_SWITCH_MASK & (1 << i)) {
+            gpio_set_pulls(i, true, false);
+        }
+    }
+
+    user_button_state = ~gpio_get_all();
+    sleep_ms(5);
+    user_button_state |= ~gpio_get_all();
+    gpio_init_mask(BW_SWITCH_MASK);
+}
+
+static void __attribute__((constructor)) boot_double_tap_check(void) {
+    // If we haven't reset via a button press we ought not to delay startup
+    if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS)) return;
+
+    // Set up long press detect
+    gpio_init(BW_RESET_SW);
+    gpio_set_dir(BW_RESET_SW, GPIO_IN);
+    gpio_pull_up(BW_RESET_SW);
+
+    // DEBUG: Set up LEDs
+    gpio_init_mask(0b1111);
+    gpio_set_dir_out_masked(0b1111);
+    if (!double_tap_flag_is_set()) {
+        // Arm, wait, then disarm and continue booting
+        set_double_tap_flag();
+
+        for(int i = 0; i < POWMAN_DOUBLE_RESET_TIMEOUT_MS / 50; i++) {
+            // DEBUG: Crudely flicker leds
+            gpio_put_masked(0b1111, i & 1);
+            busy_wait_us(50 * 1000);
+        }
+        gpio_put_masked(0b1111, 0);
+        clear_double_tap_flag();
+        if(gpio_get(BW_RESET_SW) == 0) {
+            // If the reset sw is pressed at this point, assume it's held
+            powman_init();
+
+
+            // We must set the pulls on the user buttons or they will not be sufficient
+            // to trigger the interrupt pin
+            gpio_init_mask(BW_SWITCH_MASK);
+            gpio_set_dir_in_masked(BW_SWITCH_MASK);
+            gpio_set_pulls(BW_SWITCH_A, true, false);
+            gpio_set_pulls(BW_SWITCH_B, true, false);
+            gpio_set_pulls(BW_SWITCH_C, true, false);
+            gpio_set_pulls(BW_SWITCH_UP, true, false);
+            gpio_set_pulls(BW_SWITCH_DOWN, true, false);
+
+            int err;
+            //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
+            err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP1_CH, BW_RTC_ALARM, true, false, 1000);
+            //err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP2_CH, BW_RESET_SW, true, true, 1000);
+            err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP3_CH, BW_SWITCH_INT, true, false, 1000);
+            (void)err;
+
+            int rc = powman_off();
+            hard_assert(rc == PICO_OK);
+            hard_assert(false); // should never get here!
+        }
+        return;
+    }
+    clear_double_tap_flag();
+    powman_wake_with_doubletap = true;
 }
