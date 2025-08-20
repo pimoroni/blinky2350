@@ -17,6 +17,13 @@
 #define _BOARDS_PICO2_H
 
 // Board config
+// RTC = PCF85063e
+#define BW_RTC_I2C       i2c0
+#define BW_RTC_ADDR      (0x51)
+#define BW_RTC_I2C_SDA   (4)
+#define BW_RTC_I2C_SCL   (5)
+
+// Rear white LEDs
 #define BW_LED_0         (0)
 #define BW_LED_1         (1)
 #define BW_LED_2         (3)

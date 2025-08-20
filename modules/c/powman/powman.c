@@ -24,6 +24,76 @@ uint32_t powman_get_user_switches(void) {
     return user_button_state;
 }
 
+void i2c_enable(void) {
+    gpio_init(BW_SW_POWER_EN);
+    gpio_set_dir(BW_SW_POWER_EN, GPIO_OUT);
+    gpio_put(BW_SW_POWER_EN, 1);
+
+    sleep_ms(500);
+
+    i2c_init(BW_RTC_I2C, 100 * 1000);
+    gpio_set_function(BW_RTC_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(BW_RTC_I2C_SCL, GPIO_FUNC_I2C);
+}
+
+void i2c_disable(void) {
+    gpio_put(BW_RTC_I2C_SDA, 0);
+    gpio_init(BW_RTC_I2C_SCL);
+}
+
+static inline uint8_t pcf85063_get_timer_flag() {
+    uint8_t buf = 0x01;
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, &buf, 1, false);
+    i2c_read_blocking(BW_RTC_I2C, BW_RTC_ADDR, (uint8_t *)&buf, 1, false);
+    return (buf & 0x08) == 0x08;
+}
+
+static inline void pcf85063_clear_timer_flag() {
+    uint8_t buf[2] = {0x01, 0b00000000}; // Control_2
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, buf, 2, false);
+}
+
+static inline void pcf85063_disable_interrupt() {
+    // Disable RTC timer interrupt
+    uint8_t data3[2] = {0x11, 0b00000000};
+    i2c_write_blocking(BW_RTC_I2C, 0x51, data3, 2, false);
+}
+
+void pcf85063_wakeup_init(uint8_t period) {
+    // Set up the RTC to countdown before triggering wake
+
+    // Set default timer frequency to minutes (1/60Hz)
+    uint8_t timer_mode = 0b00010000; // 0b11 == minutes, 0b10 == seconds
+
+    uint8_t buf[2] = {0};
+
+    buf[0] = 0x00; // Control_1
+    buf[1] = 0b00000000; // Ensure default values
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, buf, 2, false);
+
+    buf[0] = 0x11; // Timer_mode
+    buf[1] = timer_mode; // interrupt disable + timer disable
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, buf, 2, false);
+
+    // Clear any prior interrupt flags
+    // And ensure a 32738 Hz clockout
+    pcf85063_clear_timer_flag();
+
+    // Switch into seconds to time anything 4 minutes and under
+    //if (period <= 4) {
+    //    period *= 60;
+    //    timer_mode = 0b00010000; // 0b10 == seconds
+    //}
+
+    buf[0] = 0x10; // Timer_value
+    buf[1] = period; // Set the timer period (in seconds)
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, buf, 2, false);
+
+    buf[0] = 0x11; // Timer_mode
+    buf[1] = timer_mode | 0b00000111; // interrupt enable + timer enable
+    i2c_write_blocking(BW_RTC_I2C, BW_RTC_ADDR, buf, 2, false);
+}
+
 void powman_init() {
     uint64_t abs_time_ms = 1746057600000; // 2025/05/01 - Milliseconds since epoch
 
@@ -186,6 +256,10 @@ static void __attribute__((constructor)) gpio_latch(void) {
 }
 
 static void __attribute__((constructor)) boot_double_tap_check(void) {
+    i2c_enable();
+    pcf85063_disable_interrupt();
+    i2c_disable();
+
     // If we haven't reset via a button press we ought not to delay startup
     if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS)) return;
 

@@ -14,6 +14,10 @@
 #include "hardware/vreg.h"
 #include "hardware/flash.h"
 #include "hardware/structs/qmi.h"
+#include "hardware/i2c.h"
+
+// For Blinky teardown
+#include "hardware/pio.h"
 
 #define POWMAN_DOUBLE_RESET_TIMEOUT_MS 2000
 
