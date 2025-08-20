@@ -56,11 +56,11 @@ mp_obj_t _sleep_get_wake_buttons(void) {
     uint32_t user_sw = powman_get_user_switches();
     mp_obj_t tuple_items[5];
     int i = 0;
-    if(user_sw & (1 << BW_SWITCH_A)) {tuple_items[i] = mp_obj_new_int(BW_SWITCH_A);i++;}
-    if(user_sw & (1 << BW_SWITCH_B)) {tuple_items[i] = mp_obj_new_int(BW_SWITCH_B);i++;}
-    if(user_sw & (1 << BW_SWITCH_C)) {tuple_items[i] = mp_obj_new_int(BW_SWITCH_C);i++;}
-    if(user_sw & (1 << BW_SWITCH_UP)) {tuple_items[i] = mp_obj_new_int(BW_SWITCH_UP);i++;}
-    if(user_sw & (1 << BW_SWITCH_DOWN)) {tuple_items[i] = mp_obj_new_int(BW_SWITCH_DOWN);i++;}
+    if(user_sw & (1 << BW_SWITCH_A)) {tuple_items[i] = machine_pin_find(mp_obj_new_int(BW_SWITCH_A));i++;}
+    if(user_sw & (1 << BW_SWITCH_B)) {tuple_items[i] = machine_pin_find(mp_obj_new_int(BW_SWITCH_B));i++;}
+    if(user_sw & (1 << BW_SWITCH_C)) {tuple_items[i] = machine_pin_find(mp_obj_new_int(BW_SWITCH_C));i++;}
+    if(user_sw & (1 << BW_SWITCH_UP)) {tuple_items[i] = machine_pin_find(mp_obj_new_int(BW_SWITCH_UP));i++;}
+    if(user_sw & (1 << BW_SWITCH_DOWN)) {tuple_items[i] = machine_pin_find(mp_obj_new_int(BW_SWITCH_DOWN));i++;}
     return mp_obj_new_tuple(i, tuple_items);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(_sleep_get_wake_buttons_obj, _sleep_get_wake_buttons);

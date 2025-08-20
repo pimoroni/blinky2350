@@ -16,6 +16,9 @@
 #include "hardware/structs/qmi.h"
 #include "hardware/i2c.h"
 
+// For machine_pin_find
+#include "machine_pin.h"
+
 // For Blinky teardown
 #include "hardware/pio.h"
 
