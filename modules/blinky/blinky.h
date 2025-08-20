@@ -16,4 +16,3 @@ extern mp_obj_t Blinky_set_brightness(mp_obj_t self_in, mp_obj_t value);
 extern mp_obj_t Blinky_get_brightness(mp_obj_t self_in);
 extern mp_obj_t Blinky_adjust_brightness(mp_obj_t self_in, mp_obj_t delta);
 
-extern mp_obj_t Blinky_is_pressed(mp_obj_t self_in, mp_obj_t button);
