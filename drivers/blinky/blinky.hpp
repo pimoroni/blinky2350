@@ -12,14 +12,13 @@ namespace pimoroni {
     static const int HEIGHT = 26;
 
     // pin assignments
-    static const uint8_t COLUMN_CLOCK           = 14;
-    static const uint8_t COLUMN_DATA            = 15;
-    static const uint8_t COLUMN_LATCH           = 16;
-    static const uint8_t COLUMN_BLANK           = 17;
+    static const uint8_t COLUMN_CLOCK           = 16;
+    static const uint8_t COLUMN_DATA            = 17;
+    static const uint8_t COLUMN_LATCH           = 18;
+    static const uint8_t COLUMN_BLANK           = 19;
 
-    static const uint8_t ROW_DATA               = 18;
-    static const uint8_t ROW_DATA_CLOCK         = 19;
-    static const uint8_t ROW_REG_CLOCK          = 20;
+    static const uint8_t ROW_DATA               = 20;
+    static const uint8_t ROW_DATA_CLOCK         = 21;
 
     static const uint8_t I2C_SDA                =  4;
     static const uint8_t I2C_SCL                =  5;
@@ -31,6 +30,14 @@ namespace pimoroni {
     static const uint8_t SWITCH_DOWN            =  6;
 
     static const uint8_t SWITCH_USER            = 22;
+
+    static const uint8_t SW_POWER_EN            = 27;
+    static const uint8_t RESET_SW               = 14;
+    static const uint8_t SWITCH_INT             = 15;
+    static const uint8_t CHARGE_STAT            = 12;
+    static const uint8_t VBUS_DETECT            = 11;
+    static const uint8_t RTC_ALARM              = 13;
+
 
   private:
     static const uint32_t ROW_COUNT = 26;

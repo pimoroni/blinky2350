@@ -36,17 +36,13 @@ include(qrcode/micropython/micropython)
 
 # Sensors & Breakouts
 include(micropython-common-breakouts)
+include(pcf85063a/micropython)
 
 # Utility
 include(adcfft/micropython)
 
 # LEDs & Matrices
 include(plasma/micropython)
-if("${PICO_BOARD}" STREQUAL "pimoroni_interstate75_duo")
-include(modules/duo75/micropython)
-else()
-include(hub75/micropython)
-endif()
 if("${PICO_BOARD}" STREQUAL "pimoroni_blinky2350")
 include(modules/blinky/micropython)
 endif()
