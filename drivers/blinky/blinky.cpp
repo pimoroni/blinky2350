@@ -130,13 +130,6 @@ namespace pimoroni {
       }
     }
 
-    gpio_init(SW_POWER_EN); gpio_set_dir(SW_POWER_EN, GPIO_OUT); gpio_put(SW_POWER_EN, true);
-    gpio_init(SWITCH_INT); gpio_set_dir(SWITCH_INT, GPIO_IN); gpio_pull_up(SWITCH_INT);
-    gpio_init(CHARGE_STAT); gpio_set_dir(CHARGE_STAT, GPIO_IN); gpio_pull_up(CHARGE_STAT);
-    gpio_init(RESET_SW); gpio_set_dir(RESET_SW, GPIO_IN);
-    gpio_init(VBUS_DETECT); gpio_set_dir(VBUS_DETECT, GPIO_IN);
-    gpio_init(RTC_ALARM); gpio_set_dir(RTC_ALARM, GPIO_IN);
-
     gpio_init(COLUMN_CLOCK); gpio_set_dir(COLUMN_CLOCK, GPIO_OUT); gpio_put(COLUMN_CLOCK, false);
     gpio_init(COLUMN_DATA); gpio_set_dir(COLUMN_DATA, GPIO_OUT); gpio_put(COLUMN_DATA, false);
     gpio_init(COLUMN_LATCH); gpio_set_dir(COLUMN_LATCH, GPIO_OUT); gpio_put(COLUMN_LATCH, false);
@@ -201,15 +194,6 @@ namespace pimoroni {
     gpio_put(COLUMN_BLANK, false);
     sleep_us(10);
     gpio_put(COLUMN_BLANK, true);
-
-    // setup button inputs
-    gpio_init(SWITCH_A); gpio_pull_up(SWITCH_A);
-    gpio_init(SWITCH_B); gpio_pull_up(SWITCH_B);
-    gpio_init(SWITCH_C); gpio_pull_up(SWITCH_C);
-    gpio_init(SWITCH_UP); gpio_pull_up(SWITCH_UP);
-    gpio_init(SWITCH_DOWN); gpio_pull_up(SWITCH_DOWN);
-
-    gpio_init(SWITCH_USER); gpio_pull_up(SWITCH_USER);
 
     // setup the pio if it has not previously been set up
     bitstream_pio = pio0;
@@ -413,10 +397,6 @@ namespace pimoroni {
         }
       }
     }
-  }
-
-  bool Blinky::is_pressed(uint8_t button) {
-    return !gpio_get(button);
   }
 
 }

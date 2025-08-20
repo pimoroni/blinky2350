@@ -20,25 +20,6 @@ namespace pimoroni {
     static const uint8_t ROW_DATA               = 20;
     static const uint8_t ROW_DATA_CLOCK         = 21;
 
-    static const uint8_t I2C_SDA                =  4;
-    static const uint8_t I2C_SCL                =  5;
-
-    static const uint8_t SWITCH_A               =  7;
-    static const uint8_t SWITCH_B               =  8;
-    static const uint8_t SWITCH_C               =  9;
-    static const uint8_t SWITCH_UP              =  10;
-    static const uint8_t SWITCH_DOWN            =  6;
-
-    static const uint8_t SWITCH_USER            = 22;
-
-    static const uint8_t SW_POWER_EN            = 27;
-    static const uint8_t RESET_SW               = 14;
-    static const uint8_t SWITCH_INT             = 15;
-    static const uint8_t CHARGE_STAT            = 12;
-    static const uint8_t VBUS_DETECT            = 11;
-    static const uint8_t RTC_ALARM              = 13;
-
-
   private:
     static const uint32_t ROW_COUNT = 26;
     static const uint32_t COL_COUNT = 39;
@@ -76,8 +57,6 @@ namespace pimoroni {
     void adjust_brightness(float delta);
 
     void set_pixel(int x, int y, uint8_t v);
-
-    bool is_pressed(uint8_t button);
 
   private:
     void partial_teardown();
