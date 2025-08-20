@@ -55,13 +55,13 @@ mp_obj_t Blinky_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
 
     int pio_int = args[ARG_pio].u_int;
     if(pio_int < 0 || pio_int > (int)NUM_PIOS) {
-        mp_raise_ValueError("pio out of range. Expected 0 to 2");
+        mp_raise_ValueError(MP_ERROR_TEXT("pio out of range. Expected 0 to 2"));
     }
     //PIO pio = pio_int == 0 ? pio0 : pio1;
 
     int sm = args[ARG_sm].u_int;
     if(sm < 0 || sm > (int)NUM_PIO_STATE_MACHINES) {
-        mp_raise_ValueError("sm out of range. Expected 0 to 3");
+        mp_raise_ValueError(MP_ERROR_TEXT("sm out of range. Expected 0 to 3"));
     }
 
 
