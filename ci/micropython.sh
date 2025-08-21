@@ -25,25 +25,21 @@ function log_warning {
 function ci_pimoroni_pico_clone {
     log_inform "Using Pimoroni Pico $PIMORONI_PICO_FLAVOUR/$PIMORONI_PICO_VERSION"
     git clone https://github.com/$PIMORONI_PICO_FLAVOUR/pimoroni-pico "$CI_BUILD_ROOT/pimoroni-pico"
-    cd "$CI_BUILD_ROOT/pimoroni-pico" || return 1
-    git checkout $PIMORONI_PICO_VERSION
-    git submodule update --init
-    cd "$CI_BUILD_ROOT"
+    git -C "$CI_BUILD_ROOT/pimoroni-pico" checkout $PIMORONI_PICO_VERSION
+    git -C "$CI_BUILD_ROOT/pimoroni-pico" submodule update --init
 }
 
 function ci_micropython_clone {
     log_inform "Using MicroPython $MICROPYTHON_FLAVOUR/$MICROPYTHON_VERSION"
     git clone https://github.com/$MICROPYTHON_FLAVOUR/micropython "$CI_BUILD_ROOT/micropython"
-    cd "$CI_BUILD_ROOT/micropython" || return 1
-    git checkout $MICROPYTHON_VERSION
-    git submodule update --init lib/pico-sdk
-    git submodule update --init lib/cyw43-driver
-    git submodule update --init lib/lwip
-    git submodule update --init lib/mbedtls
-    git submodule update --init lib/micropython-lib
-    git submodule update --init lib/tinyusb
-    git submodule update --init lib/btstack
-    cd "$CI_BUILD_ROOT"
+    git -C "$CI_BUILD_ROOT/micropython" checkout $MICROPYTHON_VERSION
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/pico-sdk
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/cyw43-driver
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/lwip
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/mbedtls
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/micropython-lib
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/tinyusb
+    git -C "$CI_BUILD_ROOT/micropython" submodule update --init lib/btstack
 }
 
 function ci_tools_clone {
@@ -54,11 +50,9 @@ function ci_tools_clone {
 }
 
 function ci_micropython_build_mpy_cross {
-    cd "$CI_BUILD_ROOT/micropython/mpy-cross" || return 1
     ccache --zero-stats || true
-    CROSS_COMPILE="ccache " make
+    CROSS_COMPILE="ccache " make -C "$CI_BUILD_ROOT/micropython/mpy-cross"
     ccache --show-stats || true
-    cd "$CI_BUILD_ROOT"
 }
 
 function ci_apt_install_build_deps {
@@ -90,8 +84,8 @@ function ci_genversion {
         CI_RELEASE_FILENAME=$BOARD
     fi
 
-    MICROPYTHON_SHA=`cd $CI_BUILD_ROOT/micropython && git describe --always --long --abbrev=40 HEAD`
-    PIMORONI_PICO_SHA=`cd $CI_BUILD_ROOT/pimoroni-pico && git describe --always --long --abbrev=40 HEAD`
+    MICROPYTHON_SHA=`git -C "$CI_BUILD_ROOT/micropython" describe --always --long --abbrev=40 HEAD`
+    PIMORONI_PICO_SHA=`git -C "$CI_BUILD_ROOT/pimoroni-pico" describe --always --long --abbrev=40 HEAD`
     RELEASE_FILE="$CI_RELEASE_FILENAME"
 
     cat << EOF > "$MICROPY_BOARD_DIR/version.py"
