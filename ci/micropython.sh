@@ -7,7 +7,8 @@ PIMORONI_PICO_FLAVOUR="pimoroni"
 PIMORONI_PICO_VERSION="main"
 
 PY_DECL_VERSION="v0.0.3"
-DIR2UF2_VERSION="v0.0.9"
+DIR2UF2_VERSION="feature/custom-fs"
+FFSMAKE_VERSION="main"
 
 
 function log_success {
@@ -46,7 +47,14 @@ function ci_tools_clone {
     mkdir -p "$CI_BUILD_ROOT/tools"
     git clone https://github.com/gadgetoid/py_decl -b "$PY_DECL_VERSION" "$CI_BUILD_ROOT/tools/py_decl"
     git clone https://github.com/gadgetoid/dir2uf2 -b "$DIR2UF2_VERSION" "$CI_BUILD_ROOT/tools/dir2uf2"
+    git clone https://github.com/gadgetoid/ffsmake -b "$FFSMAKE_VERSION" "$CI_BUILD_ROOT/tools/ffsmake" --recursive
     python3 -m pip install littlefs-python==0.12.0
+
+    # Build FFSMake utility
+    FFSMAKE_DIR="$CI_BUILD_ROOT/tools/ffsmake"
+    mkdir -p "$FFSMAKE_DIR/build"
+    cmake -S "$FFSMAKE_DIR" -B "$FFSMAKE_DIR/build"
+    cmake --build "$FFSMAKE_DIR/build"
 }
 
 function ci_micropython_build_mpy_cross {
