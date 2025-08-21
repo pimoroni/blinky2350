@@ -238,28 +238,30 @@ static inline void clear_double_tap_flag(void) {
     powman_clear_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
 }
 
-static void __attribute__((constructor)) gpio_latch(void) {
+static inline void setup_buttons(void) {
     // Init all button GPIOs
     gpio_init_mask(BW_SWITCH_MASK);
     gpio_set_dir_in_masked(BW_SWITCH_MASK);
+    gpio_set_pulls(BW_SWITCH_A, true, false);
+    gpio_set_pulls(BW_SWITCH_B, true, false);
+    gpio_set_pulls(BW_SWITCH_C, true, false);
+    gpio_set_pulls(BW_SWITCH_UP, true, false);
+    gpio_set_pulls(BW_SWITCH_DOWN, true, false);
+}
 
-    for(int i = 0; i < 32; i++) {
-        if(BW_SWITCH_MASK & (1 << i)) {
-            gpio_set_pulls(i, true, false);
-        }
-    }
+// Set up buttons, latch inputs, disable RTC interrupt
+static inline void setup_system(void) {
+    setup_buttons();
 
     user_button_state = ~gpio_get_all();
     sleep_ms(5);
     user_button_state |= ~gpio_get_all();
-    gpio_init_mask(BW_SWITCH_MASK);
-}
 
-static void __attribute__((constructor)) boot_double_tap_check(void) {
     i2c_enable();
     pcf85063_disable_interrupt();
-    i2c_disable();
+}
 
+static void __attribute__((constructor)) powman_startup(void) {
     // If we haven't reset via a button press we ought not to delay startup
     if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS)) return;
 
@@ -286,16 +288,9 @@ static void __attribute__((constructor)) boot_double_tap_check(void) {
             // If the reset sw is pressed at this point, assume it's held
             powman_init();
 
-
             // We must set the pulls on the user buttons or they will not be sufficient
             // to trigger the interrupt pin
-            gpio_init_mask(BW_SWITCH_MASK);
-            gpio_set_dir_in_masked(BW_SWITCH_MASK);
-            gpio_set_pulls(BW_SWITCH_A, true, false);
-            gpio_set_pulls(BW_SWITCH_B, true, false);
-            gpio_set_pulls(BW_SWITCH_C, true, false);
-            gpio_set_pulls(BW_SWITCH_UP, true, false);
-            gpio_set_pulls(BW_SWITCH_DOWN, true, false);
+            setup_buttons();
 
             int err;
             //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
@@ -304,12 +299,15 @@ static void __attribute__((constructor)) boot_double_tap_check(void) {
             err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP3_CH, BW_SWITCH_INT, true, false, 1000);
             (void)err;
 
+            i2c_disable();
             int rc = powman_off();
             hard_assert(rc == PICO_OK);
             hard_assert(false); // should never get here!
         }
+        setup_system();
         return;
     }
     clear_double_tap_flag();
     powman_wake_with_doubletap = true;
+    setup_system();
 }
