@@ -259,12 +259,12 @@ static inline void setup_gpio(bool buttons_only) {
 
     // Init the RTC interrupt
     gpio_init(BW_RTC_ALARM);
-    gpio_set_dir(BW_SWITCH_INT, GPIO_IN);
-    gpio_set_pulls(BW_SWITCH_INT, true, false);
+    gpio_set_dir(BW_RTC_ALARM, GPIO_IN);
+    gpio_set_pulls(BW_RTC_ALARM, true, false);
 
     // Init the VBUS detect
     gpio_init(BW_VBUS_DETECT);
-    gpio_set_dir(BW_SWITCH_INT, GPIO_IN);
+    gpio_set_dir(BW_VBUS_DETECT, GPIO_IN);
 
     // Set up LEDs
     gpio_init_mask(0b1111);
