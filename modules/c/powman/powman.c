@@ -31,7 +31,7 @@ void i2c_enable(void) {
 
     sleep_ms(500);
 
-    i2c_init(BW_RTC_I2C, 100 * 1000);
+    i2c_init(BW_RTC_I2C, 400 * 1000);
     gpio_set_function(BW_RTC_I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(BW_RTC_I2C_SCL, GPIO_FUNC_I2C);
 }
@@ -238,7 +238,7 @@ static inline void clear_double_tap_flag(void) {
     powman_clear_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
 }
 
-static inline void setup_buttons(void) {
+static inline void setup_gpio(bool buttons_only) {
     // Init all button GPIOs
     gpio_init_mask(BW_SWITCH_MASK);
     gpio_set_dir_in_masked(BW_SWITCH_MASK);
@@ -247,12 +247,42 @@ static inline void setup_buttons(void) {
     gpio_set_pulls(BW_SWITCH_C, true, false);
     gpio_set_pulls(BW_SWITCH_UP, true, false);
     gpio_set_pulls(BW_SWITCH_DOWN, true, false);
+
+    if(buttons_only) {
+        return;
+    }
+
+    // Init the button interrupt
+    gpio_init(BW_SWITCH_INT);
+    gpio_set_dir(BW_SWITCH_INT, GPIO_IN);
+    gpio_set_pulls(BW_SWITCH_INT, true, false);
+
+    // Init the RTC interrupt
+    gpio_init(BW_RTC_ALARM);
+    gpio_set_dir(BW_SWITCH_INT, GPIO_IN);
+    gpio_set_pulls(BW_SWITCH_INT, true, false);
+
+    // Init the VBUS detect
+    gpio_init(BW_VBUS_DETECT);
+    gpio_set_dir(BW_SWITCH_INT, GPIO_IN);
+
+    // Set up LEDs
+    gpio_init_mask(0b1111);
+    gpio_set_dir_out_masked(0b1111);
+
+    // Set up long press detect
+    gpio_init(BW_RESET_SW);
+    gpio_set_dir(BW_RESET_SW, GPIO_IN);
+    gpio_pull_up(BW_RESET_SW);
+
+    // Enable I2C power
+    gpio_init(BW_SW_POWER_EN);
+    gpio_set_dir(BW_SW_POWER_EN, GPIO_OUT);
+    gpio_put(BW_SW_POWER_EN, 1);
 }
 
-// Set up buttons, latch inputs, disable RTC interrupt
+// Latch inputs, disable RTC interrupt
 static inline void setup_system(void) {
-    setup_buttons();
-
     user_button_state = ~gpio_get_all();
     sleep_ms(5);
     user_button_state |= ~gpio_get_all();
@@ -262,17 +292,11 @@ static inline void setup_system(void) {
 }
 
 static void __attribute__((constructor)) powman_startup(void) {
+    setup_gpio(false);
+
     // If we haven't reset via a button press we ought not to delay startup
     if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS)) return;
 
-    // Set up long press detect
-    gpio_init(BW_RESET_SW);
-    gpio_set_dir(BW_RESET_SW, GPIO_IN);
-    gpio_pull_up(BW_RESET_SW);
-
-    // DEBUG: Set up LEDs
-    gpio_init_mask(0b1111);
-    gpio_set_dir_out_masked(0b1111);
     if (!double_tap_flag_is_set()) {
         // Arm, wait, then disarm and continue booting
         set_double_tap_flag();
@@ -290,7 +314,7 @@ static void __attribute__((constructor)) powman_startup(void) {
 
             // We must set the pulls on the user buttons or they will not be sufficient
             // to trigger the interrupt pin
-            setup_buttons();
+            setup_gpio(true);
 
             int err;
             //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
