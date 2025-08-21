@@ -83,6 +83,25 @@ function micropython_version {
     echo "MICROPY_GIT_HASH=$MICROPYTHON_VERSION-$TAG_OR_SHA" >> $GITHUB_ENV
 }
 
+function ci_genversion {
+    BOARD=$1
+    MICROPY_BOARD_DIR=$CI_PROJECT_ROOT/boards/$BOARD
+    if [ -z ${CI_RELEASE_FILENAME+x} ]; then
+        CI_RELEASE_FILENAME=$BOARD
+    fi
+
+    MICROPYTHON_SHA=`cd $CI_BUILD_ROOT/micropython && git describe --always --long --abbrev=40 HEAD`
+    PIMORONI_PICO_SHA=`cd $CI_BUILD_ROOT/pimoroni-pico && git describe --always --long --abbrev=40 HEAD`
+    RELEASE_FILE="$CI_RELEASE_FILENAME"
+
+    cat << EOF > "$MICROPY_BOARD_DIR/version.py"
+DATE="`date`"
+BUILD="$RELEASE_FILE"
+MICROPYTHON_SHA="$MICROPYTHON_SHA"
+PIMORONI_PICO_SHA="$PIMORONI_PICO_SHA"
+EOF
+}
+
 function ci_cmake_configure {
     BOARD=$1
     TOOLS_DIR="$CI_BUILD_ROOT/tools"
@@ -113,6 +132,9 @@ function ci_cmake_build {
         log_warning "Invalid board: \"$BOARD\". Run with ci_cmake_build <board_name>."
         return 1
     fi
+
+    ci_genversion $BOARD
+
     BUILD_DIR="$CI_BUILD_ROOT/build-$BOARD"
     ccache --zero-stats || true
     cmake --build $BUILD_DIR -j 2
