@@ -64,8 +64,8 @@
 // no PICO_DEFAULT_UART_RX_PIN
 
 // --- LED ---
-// no PICO_DEFAULT_LED_PIN
-#define PICO_DEFAULT_WS2812_PIN 39
+// no PICO_DEFAULT_LED_PIN - LED is on Wireless chip
+// no PICO_DEFAULT_WS2812_PIN
 
 // --- I2C ---
 #ifndef PICO_DEFAULT_I2C
@@ -105,7 +105,7 @@
 
 // pico_cmake_set_default PICO_FLASH_SIZE_BYTES = (4 * 1024 * 1024)
 #ifndef PICO_FLASH_SIZE_BYTES
-#define PICO_FLASH_SIZE_BYTES (4 * 1024 * 1024)
+#define PICO_FLASH_SIZE_BYTES (16 * 1024 * 1024)
 #endif
 
 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
