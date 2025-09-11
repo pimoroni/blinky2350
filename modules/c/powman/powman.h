@@ -15,6 +15,7 @@
 #include "hardware/flash.h"
 #include "hardware/structs/qmi.h"
 #include "hardware/i2c.h"
+#include "hardware/resets.h"
 
 // For machine_pin_find
 #include "machine_pin.h"

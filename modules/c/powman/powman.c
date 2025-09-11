@@ -37,7 +37,8 @@ void i2c_enable(void) {
 }
 
 void i2c_disable(void) {
-    gpio_put(BW_RTC_I2C_SDA, 0);
+    gpio_init(BW_SW_POWER_EN);
+    gpio_init(BW_RTC_I2C_SDA);
     gpio_init(BW_RTC_I2C_SCL);
 }
 
@@ -106,8 +107,11 @@ void powman_init() {
     //clock_configure_undivided(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, 32.768f * KHZ);
     //powman_timer_set_1khz_tick_source_lposc_with_hz(32768);
 
-    powman_timer_set_1khz_tick_source_lposc();
-    pll_deinit(pll_sys);
+    // Redundant? - we're using the RTC clock
+    //powman_timer_set_1khz_tick_source_lposc();
+
+    // Does this accomplish *anything*?
+    //pll_deinit(pll_sys);
 
     // Set all pins to input (as far as SIO is concerned)
     gpio_set_dir_all_bits(0);
@@ -135,6 +139,25 @@ void powman_init() {
 
     // Unlock the VREG control interface
     hw_set_bits(&powman_hw->vreg_ctrl, POWMAN_PASSWORD_BITS | POWMAN_VREG_CTRL_UNLOCK_BITS);
+
+    // Reset usb controller
+    reset_block_mask(RESETS_RESET_USBCTRL_BITS);
+    unreset_block_mask_wait_blocking(RESETS_RESET_USBCTRL_BITS);
+
+    // Mux the controller to the onboard usb phy
+    usb_hw->muxing = USB_USB_MUXING_TO_PHY_BITS | USB_USB_MUXING_SOFTCON_BITS;
+
+    // Initializes the USB peripheral for device mode and enables it.
+    // Don't need to enable the pull up here. Force VBUS
+    usb_hw->main_ctrl = USB_MAIN_CTRL_CONTROLLER_EN_BITS;
+
+    // Enable individual controller IRQS here. Processor interrupt enable will be used
+    // for the global interrupt enable...
+    // Note: Force VBUS detect cause disconnection not detectable
+    usb_hw->sie_ctrl = USB_SIE_CTRL_EP0_INT_1BUF_BITS;
+    usb_hw->inte = USB_INTS_BUFF_STATUS_BITS | USB_INTS_BUS_RESET_BITS | USB_INTS_SETUP_REQ_BITS |
+                    USB_INTS_DEV_SUSPEND_BITS | USB_INTS_DEV_RESUME_FROM_HOST_BITS | USB_INTS_DEV_CONN_DIS_BITS;
+
 
     // Turn off USB PHY and apply pull downs on DP & DM
     usb_hw->phy_direct = USB_USBPHY_DIRECT_TX_PD_BITS | USB_USBPHY_DIRECT_RX_PD_BITS | USB_USBPHY_DIRECT_DM_PULLDN_EN_BITS | USB_USBPHY_DIRECT_DP_PULLDN_EN_BITS;
