@@ -113,9 +113,23 @@ void powman_init() {
     gpio_set_dir_all_bits(0);
     for (int i = 0; i < NUM_BANK0_GPIOS; ++i) {
         gpio_set_function(i, GPIO_FUNC_SIO);
-        if (i > NUM_BANK0_GPIOS - NUM_ADC_CHANNELS) {
-            gpio_disable_pulls(i);
-            gpio_set_input_enabled(i, false);
+        gpio_set_input_enabled(i, false);
+        switch (i) {
+            case 14:
+            case 22:
+            case 26:
+            case 27:
+            case 28: // Floating
+                gpio_disable_pulls(i);
+                break;
+            case BW_SWITCH_A:
+            case BW_SWITCH_B:
+            case BW_SWITCH_C:
+            case BW_SWITCH_UP:
+            case BW_SWITCH_DOWN: // Don't mess with the button pulls, must be pulled up
+                break;
+            default: // Pull down
+                gpio_set_pulls(i, false, true);
         }
     }
 
