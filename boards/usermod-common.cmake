@@ -36,22 +36,17 @@ include(qrcode/micropython/micropython)
 
 # Sensors & Breakouts
 include(micropython-common-breakouts)
+
+# Driver for RTC
 include(pcf85063a/micropython)
 
 # Utility
 include(adcfft/micropython)
 
 # LEDs & Matrices
-include(plasma/micropython)
 if("${PICO_BOARD}" STREQUAL "pimoroni_blinky2350")
 include(modules/blinky/micropython)
 endif()
-
-# Servos & Motors
-include(pwm/micropython)
-include(servo/micropython)
-include(encoder/micropython)
-include(motor/micropython)
 
 # Sleep / Wake Reason
 include(modules/c/powman/micropython)
