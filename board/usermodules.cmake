@@ -1,3 +1,4 @@
+
 if(NOT DEFINED PIMORONI_PICO_PATH)
 set(PIMORONI_PICO_PATH ${CMAKE_CURRENT_LIST_DIR}/../pimoroni-pico)
 endif()
@@ -12,8 +13,7 @@ list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}/micropython")
 # All regular modules
 list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}/micropython/modules")
-
-# Allows us to find /modules/duo75
+# Local modules in modules/
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/..")
 
 set(CMAKE_C_STANDARD 11)
@@ -44,9 +44,7 @@ include(pcf85063a/micropython)
 include(adcfft/micropython)
 
 # LEDs & Matrices
-if("${PICO_BOARD}" STREQUAL "pimoroni_blinky2350")
-include(modules/blinky/micropython)
-endif()
+include(modules/c/blinky/micropython)
 
 # Sleep / Wake Reason
 include(modules/c/powman/micropython)
