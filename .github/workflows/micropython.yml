@@ -37,10 +37,16 @@ jobs:
           ccache-micropython-${{ matrix.name }}-${{ github.ref }}
           ccache-micropython-${{ matrix.name }}-
 
+    - name: "Checkout Project"
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        path: ${{ env.CI_PROJECT_ROOT }}
+
     - name: "Prepare All: Generate cache key"
       shell: bash
       run: |
-        echo "CI_CACHE_KEY=\"`shasum "$CI_PROJECT_ROOT/ci/micropython.sh" | cut -d " " -f 1`\"" >> $GITHUB_ENV
+        echo "CI_CACHE_KEY=`shasum "$CI_PROJECT_ROOT/ci/micropython.sh" | cut -d " " -f 1`" >> $GITHUB_ENV
 
     - name: "Prepare All: Restore saved cache"
       id: cache-prepare-all
@@ -89,7 +95,7 @@ jobs:
       shell: bash
       run: |
         source $CI_PROJECT_ROOT/ci/micropython.sh
-        ci_cmake_build
+        ci_cmake_build ${{ matrix.name }}
 
     - name: "Artifacts: Upload .uf2"
       uses: actions/upload-artifact@v4
