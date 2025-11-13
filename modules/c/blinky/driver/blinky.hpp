@@ -50,13 +50,15 @@ namespace pimoroni {
 
     void clear();
 
-    void update(PicoGraphics *graphics);
+    void update();
 
     void set_brightness(float value);
     float get_brightness();
     void adjust_brightness(float delta);
 
     void set_pixel(int x, int y, uint8_t v);
+
+    uint32_t* get_framebuffer();
 
   private:
     void partial_teardown();

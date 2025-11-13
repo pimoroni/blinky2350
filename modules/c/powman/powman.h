@@ -2,10 +2,12 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <math.h>
 #include "pico/stdio.h"
 #include "pico/sync.h"
 #include "hardware/gpio.h"
 #include "hardware/powman.h"
+#include "hardware/watchdog.h"
 #include "hardware/clocks.h"
 #include "hardware/pll.h"
 #include "hardware/adc.h"
@@ -16,6 +18,7 @@
 #include "hardware/structs/qmi.h"
 #include "hardware/i2c.h"
 #include "hardware/resets.h"
+#include "hardware/pwm.h"
 
 // For machine_pin_find
 #include "machine_pin.h"
@@ -45,6 +48,8 @@ int powman_off_until_time(uint64_t absolute_time_ms);
 int powman_off_for_ms(uint64_t duration_ms);
 uint8_t powman_get_wake_reason(void);
 uint32_t powman_get_user_switches(void);
+bool powman_wake_reset(void);
+bool powman_wake_watchdog(void);
 
 void powman_init();
 int powman_setup_gpio_wakeup(int hw_wakeup, int gpio, bool edge, bool high, uint64_t timeout_ms);

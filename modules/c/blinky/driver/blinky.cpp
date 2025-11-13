@@ -40,6 +40,7 @@
 
 static uint32_t dma_channel;
 static uint32_t dma_ctrl_channel;
+extern uint32_t framebuffer[];
 
 namespace pimoroni {
 
@@ -350,50 +351,25 @@ namespace pimoroni {
     this->set_brightness(this->get_brightness() + delta);
   }
 
-  void Blinky::update(PicoGraphics *graphics) {
+  uint32_t* Blinky::get_framebuffer() {
+    return framebuffer;
+  }
+
+  void Blinky::update() {
     if(blinky == this) {
-      if(graphics->pen_type == PicoGraphics::PEN_RGB888) {
-        uint32_t *p = (uint32_t *)graphics->frame_buffer;
+      uint32_t *p = (uint32_t *)framebuffer;
 
-        for(uint8_t y = 0; y < HEIGHT; y++) {
-          for(uint8_t x = 0; x < WIDTH; x++) {
-            uint32_t col = *p;
-            uint8_t r = (col & 0xff0000) >> 16;
-            uint8_t g = (col & 0x00ff00) >> 8;
-            uint8_t b = (col & 0x0000ff) >> 0;
+      for(uint8_t y = 0; y < HEIGHT; y++) {
+        for(uint8_t x = 0; x < WIDTH; x++) {
+          uint32_t col = *p;
+          uint8_t r = (col & 0xff0000) >> 16;
+          uint8_t g = (col & 0x00ff00) >> 8;
+          uint8_t b = (col & 0x0000ff) >> 0;
 
-            // Approximate brightness of the colour, mapped to our mono display
-            uint16_t brightness = ((r + g + b) * 255) / 765;
-            set_pixel(x, y, brightness);
-            p++;
-          }
-        }
-      }
-      else if(graphics->pen_type == PicoGraphics::PEN_RGB565) {
-        uint16_t *p = (uint16_t *)graphics->frame_buffer;
-        for(uint8_t y = 0; y < HEIGHT; y++) {
-          for(uint8_t x = 0; x < WIDTH; x++) {
-            uint16_t col = __builtin_bswap16(*p);
-            uint8_t r = (col & 0b1111100000000000) >> 11;
-            uint8_t g = (col & 0b0000011111100000) >> 5;
-            uint8_t b = (col & 0b0000000000011111);
-
-            // Approximate brightness of the colour, mapped to our mono display
-            uint16_t brightness = ((r + g + b) * 255) / 126;
-            set_pixel(x, y, brightness);
-            p++;
-          }
-        }
-      }
-      else if (graphics->pen_type == PicoGraphics::PEN_P8) {
-        // Just set the raw data values since Blinky is monochrome
-        // and we're using this as a the native mode
-        uint8_t *p = (uint8_t *)graphics->frame_buffer;
-        for(uint8_t y = 0; y < HEIGHT; y++) {
-          for(uint8_t x = 0; x < WIDTH; x++) {
-            set_pixel(x, y, *p);
-            p++;
-          }
+          // Approximate brightness of the colour, mapped to our mono display
+          uint16_t brightness = ((r + g + b) * 255) / 765;
+          set_pixel(x, y, brightness);
+          p++;
         }
       }
     }

@@ -25,11 +25,32 @@ enum {
     WAKE_VBUS_DETECT,   // USB VBUS
     WAKE_RTC,           // Onboard RTC alarm interrupt
     WAKE_ALARM = 0xf0,  // Internal timer timeout
+    WAKE_RESET = 0xf1,  // Chip reset low
+    WAKE_WATCHDOG = 0xf2, // Watchdog reboot
     WAKE_UNKNOWN = 0xff,
 };
 
+void mp_pico_panic(const char *fmt, ...) {
+    va_list args;
+
+    if (fmt) {
+        va_start(args, fmt);
+        int ret = mp_vprintf(&mp_plat_print, fmt, args);
+        (void)ret;
+        va_end(args);
+    }
+
+    while (1) {
+        mp_event_handle_nowait();
+        sleep_ms(1);
+    }
+}
+
 mp_obj_t _sleep_get_wake_reason(void) {
     uint8_t wake_reason = powman_get_wake_reason();
+    if(powman_wake_watchdog())           return MP_ROM_INT(WAKE_WATCHDOG);
+    if(wake_reason & POWMAN_DOUBLETAP)   return MP_ROM_INT(WAKE_DOUBLETAP);
+    if(powman_wake_reset())              return MP_ROM_INT(WAKE_RESET);
     if(wake_reason & POWMAN_WAKE_PWRUP0) return MP_ROM_INT(WAKE_VBUS_DETECT);
     if(wake_reason & POWMAN_WAKE_PWRUP1) return MP_ROM_INT(WAKE_RTC);
     if(wake_reason & POWMAN_WAKE_PWRUP2) return MP_ROM_INT(WAKE_USER_SW);
@@ -44,9 +65,8 @@ mp_obj_t _sleep_get_wake_reason(void) {
         if(user_sw & (1 << BW_SWITCH_C))    return MP_ROM_INT(WAKE_BUTTON_C);
         if(user_sw & (1 << BW_SWITCH_UP))   return MP_ROM_INT(WAKE_BUTTON_UP);
         if(user_sw & (1 << BW_SWITCH_DOWN)) return MP_ROM_INT(WAKE_BUTTON_DOWN);
-        return mp_obj_new_int(user_sw);
+        return MP_ROM_INT(WAKE_UNKNOWN);
     };
-    if(wake_reason & POWMAN_DOUBLETAP)   return MP_ROM_INT(WAKE_DOUBLETAP);
     if(wake_reason & POWMAN_WAKE_ALARM)  return MP_ROM_INT(WAKE_ALARM);
     return MP_ROM_INT(WAKE_UNKNOWN);
 }
@@ -185,6 +205,8 @@ static const mp_map_elem_t sleep_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_WAKE_VBUS_DETECT),  MP_ROM_INT(WAKE_VBUS_DETECT)  },
     { MP_ROM_QSTR(MP_QSTR_WAKE_RTC),      MP_ROM_INT(WAKE_RTC)      },
     { MP_ROM_QSTR(MP_QSTR_WAKE_ALARM),    MP_ROM_INT(WAKE_ALARM)    },
+    { MP_ROM_QSTR(MP_QSTR_WAKE_RESET),    MP_ROM_INT(WAKE_RESET)    },
+    { MP_ROM_QSTR(MP_QSTR_WAKE_WATCHDOG), MP_ROM_INT(WAKE_WATCHDOG) },
     { MP_ROM_QSTR(MP_QSTR_WAKE_UNKNOWN),  MP_ROM_INT(WAKE_UNKNOWN)  },
 };
 static MP_DEFINE_CONST_DICT(mp_module_sleep_globals, sleep_globals_table);

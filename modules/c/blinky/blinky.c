@@ -4,7 +4,7 @@
 /***** Methods *****/
 MP_DEFINE_CONST_FUN_OBJ_1(Blinky___del___obj, Blinky___del__);
 MP_DEFINE_CONST_FUN_OBJ_1(Blinky_clear_obj, Blinky_clear);
-MP_DEFINE_CONST_FUN_OBJ_2(Blinky_update_obj, Blinky_update);
+MP_DEFINE_CONST_FUN_OBJ_1(Blinky_update_obj, Blinky_update);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_set_brightness_obj, Blinky_set_brightness);
 MP_DEFINE_CONST_FUN_OBJ_1(Blinky_get_brightness_obj, Blinky_get_brightness);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_adjust_brightness_obj, Blinky_adjust_brightness);
@@ -30,6 +30,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_Blinky,
     MP_TYPE_FLAG_NONE,
     make_new, Blinky_make_new,
+    buffer, Blinky_get_framebuffer,
     print, Blinky_print,
     locals_dict, (mp_obj_dict_t*)&Blinky_locals_dict
 );

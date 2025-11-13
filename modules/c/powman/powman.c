@@ -6,6 +6,21 @@ static powman_power_state on_state;
 bool powman_wake_with_doubletap;
 uint32_t user_button_state = 0;
 
+// Long press to sleep LED effect
+#define LED_PEAK_BRIGHTNESS 150 // Total brightness value per led (this is multiplied by GAMMA)
+#define LED_IN_PHASE 30 // The delay between the current and next LED lighting up
+#define LED_OUT_PHASE 0
+#define LED_TOTAL (LED_PEAK_BRIGHTNESS + LED_IN_PHASE * 3) // Total bright phase for the LEDs
+#define LED_FADEOUT_SPEED 5 // Speedup for fading out
+#define LED_GAMMA 1.8f
+#define LED_DELAY_MS 5 // Delay between steps
+#define LED_ON_DELAY_MS 200 // A short delay before the LEDs start their thing
+#define LED_ON_DELAY (LED_ON_DELAY_MS / LED_DELAY_MS) // Convert the above delay in terms of steps
+
+// This is effectively the sequence order for the swooshy LED effect
+const uint led_gpios[4] = {BW_LED_1, BW_LED_2, BW_LED_3, BW_LED_0};
+//const uint led_gpios_poweron[4] = {BW_LED_0, BW_LED_2, BW_LED_3, BW_LED_1};
+
 //#define DEBUG
 
 uint8_t powman_get_wake_reason(void) {
@@ -18,6 +33,14 @@ uint8_t powman_get_wake_reason(void) {
     // 6 = alarm_pwrup (timeout or alarm wakeup)
     // 7 = powman_wake_with_doubletap
     return (powman_hw->last_swcore_pwrup & 0x7f) | (powman_wake_with_doubletap ? POWMAN_DOUBLETAP : 0);
+}
+
+bool powman_wake_reset(void) {
+    return powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS;
+}
+
+bool powman_wake_watchdog(void) {
+    return watchdog_caused_reboot();
 }
 
 uint32_t powman_get_user_switches(void) {
@@ -342,9 +365,85 @@ static inline void setup_system(void) {
     pcf85063_disable_interrupt();
 }
 
+/*
+// TODO is this still relevant and useful?
 static int64_t alarm_clear_double_tap(alarm_id_t id, __unused void *user_data) {
     clear_double_tap_flag();
     return 0;
+}
+*/
+
+void shipping_mode() {
+    powman_init();
+    i2c_disable();
+    int rc = powman_off();
+    hard_assert(rc == PICO_OK);
+    hard_assert(false); // should never get here!
+}
+
+void long_press_sleep() {
+    powman_init();
+
+    // We must set the pulls on the user buttons or they will not be sufficient
+    // to trigger the interrupt pin
+    setup_gpio(true);
+
+    int err;
+    //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
+    err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP1_CH, BW_RTC_ALARM, true, false, 1000);
+    //err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP2_CH, BW_RESET_SW, true, true, 1000);
+    err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP3_CH, BW_SWITCH_INT, true, false, 1000);
+    (void)err;
+
+    i2c_disable();
+    int rc = powman_off();
+    hard_assert(rc == PICO_OK);
+    hard_assert(false); // should never get here!
+}
+
+void handle_long_press() {
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv(&config, clock_get_hz(clk_sys) / 2048.0f);
+    pwm_config_set_wrap(&config, 1024);
+    for(unsigned i = 0u; i < 4; i++) {
+        gpio_set_function(led_gpios[i], GPIO_FUNC_PWM);
+        pwm_init(pwm_gpio_to_slice_num(led_gpios[i]), &config, true);
+    }
+    int br = 0;
+    while (true) {
+        // If reset is released (high), cut the long press short
+        if(gpio_get(BW_RESET_SW)) {
+            break;
+        }
+        int cbr = br < LED_ON_DELAY ? 0 : br - LED_ON_DELAY;
+        int o = cbr >= LED_TOTAL ? LED_TOTAL - (cbr - LED_TOTAL) * LED_FADEOUT_SPEED : cbr;
+        int phase = cbr >= LED_TOTAL ? LED_OUT_PHASE : LED_IN_PHASE;
+        int level = 0;
+        for(unsigned i = 0u; i < 4; i++) {
+            int v = fmax(0, fmin(LED_PEAK_BRIGHTNESS, o));
+            pwm_set_gpio_level(led_gpios[i], v * LED_GAMMA);
+            level += v * LED_GAMMA;
+            o -= phase;
+        }
+        // If the LEDs have completed their fade to black
+        if(cbr > 0 && level == 0) {
+            clear_double_tap_flag();
+            if(!gpio_get(BW_SWITCH_UP) && !gpio_get(BW_SWITCH_DOWN)) {
+                shipping_mode();
+            } else {
+                long_press_sleep();
+            }
+            break; // unreachable
+        };
+        br++;
+        sleep_ms(LED_DELAY_MS);
+    }
+    for(unsigned i = 0u; i < 4; i++) {
+        pwm_set_enabled(pwm_gpio_to_slice_num(led_gpios[i]), false);
+    }
+    gpio_init_mask(0b1111);
+    gpio_set_dir_out_masked(0b1111);
+    gpio_put_masked(0b1111, 0);
 }
 
 static void __attribute__((constructor)) powman_startup(void) {
@@ -352,8 +451,9 @@ static void __attribute__((constructor)) powman_startup(void) {
     latch_inputs();
 
     // If we haven't reset via a button press we ought not to delay startup
-    if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS)) {
+    if (!(powman_hw->chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS) || watchdog_caused_reboot()) {
         setup_system();
+        //power_on_leds();
         return;
     };
 
@@ -361,41 +461,20 @@ static void __attribute__((constructor)) powman_startup(void) {
         // Arm, wait, then disarm and continue booting
         set_double_tap_flag();
 
-        add_alarm_in_ms(POWMAN_DOUBLE_RESET_TIMEOUT_MS, alarm_clear_double_tap, NULL, false);
+        int err;
+        //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
+        err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP1_CH, BW_RTC_ALARM, true, false, 1000);
+        //err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP2_CH, BW_RESET_SW, true, true, 1000);
+        err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP3_CH, BW_SWITCH_INT, true, false, 1000);
+        (void)err;
 
-        bool long_press = true;
-        for(int i = 0; i < POWMAN_LONG_PRESS_TIMEOUT_MS / 50; i++) {
-            if(gpio_get(BW_RESET_SW)) {
-                long_press = false;
-                break;
-            }
-            // DEBUG: Crudely flicker leds
-            // TODO: Light up the LEDs in sequence to indicate long press timing
-            gpio_put_masked(0b1111, i & 1);
-            busy_wait_us(50 * 1000);
+        // If reset is held (low), it could be a long press
+        if(gpio_get(BW_RESET_SW) == 0) {
+            handle_long_press();
         }
-        gpio_put_masked(0b1111, 0);
-        if(long_press) {
-            // If the reset sw is pressed at this point, assume it's held
-            powman_init();
 
-            // We must set the pulls on the user buttons or they will not be sufficient
-            // to trigger the interrupt pin
-            setup_gpio(true);
-
-            int err;
-            //(void)powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP0_CH, BW_VBUS_DETECT, true, true, 1000);
-            err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP1_CH, BW_RTC_ALARM, true, false, 1000);
-            //err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP2_CH, BW_RESET_SW, true, true, 1000);
-            err = powman_setup_gpio_wakeup(POWMAN_WAKE_PWRUP3_CH, BW_SWITCH_INT, true, false, 1000);
-            (void)err;
-
-            i2c_disable();
-            int rc = powman_off();
-            hard_assert(rc == PICO_OK);
-            hard_assert(false); // should never get here!
-        }
         setup_system();
+        //power_on_leds();
         return;
     }
     clear_double_tap_flag();
