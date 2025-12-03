@@ -32,31 +32,32 @@
 #define BW_LED_2         (3)
 #define BW_LED_3         (4)
 
+// PSRAM
+#define BW_PSRAM_CS      (8)
+
 // User inputs
 #define BW_SWITCH_A      (7)
-#define BW_SWITCH_B      (8)
-#define BW_SWITCH_C      (9)
-#define BW_SWITCH_UP     (10)
+#define BW_SWITCH_B      (9)
+#define BW_SWITCH_C      (10)
+#define BW_SWITCH_UP     (11)
 #define BW_SWITCH_DOWN   (6)
 
 // This is wired to the RESET (Disk / Sleep / Reset / Power On)
 // button and used to determine long press status
 #define BW_RESET_SW      (14) // No pull, active high?
 
-#define BW_CHARGE_STAT   (12)
+// Moved to RM2
+// #define BW_CHARGE_STAT   (12)
 
 // I2C power for talking to RTC
 #define BW_SW_POWER_EN   (27)
 
 // Interrupt channels for GPIO wakeup
-#define BW_VBUS_DETECT   (11) // No pull, active high?
+#define BW_VBUS_DETECT   (12) // No pull, active high?
 #define BW_RTC_ALARM     (13) // Pull up, active low
 #define BW_SWITCH_HOME   (22) // AKA boot
 #define BW_SWITCH_INT    (15) // Pull up, active low
 #define BW_SWITCH_MASK   ((1 << BW_SWITCH_A) | (1 << BW_SWITCH_B) | (1 << BW_SWITCH_C) | (1 << BW_SWITCH_UP) | (1 << BW_SWITCH_DOWN))
-
-// For board detection
-#define RASPBERRYPI_PICO2
 
 // --- RP2350 VARIANT ---
 #define PICO_RP2350A 1
@@ -111,8 +112,9 @@
 #define PICO_FLASH_SIZE_BYTES (16 * 1024 * 1024)
 #endif
 
-// Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
-// no PICO_SMPS_MODE_PIN
+#ifndef CYW43_WL_GPIO_COUNT
+#define CYW43_WL_GPIO_COUNT 3
+#endif
 
 // The GPIO Pin used to read VBUS to determine if the device is battery powered.
 // no PICO_VBUS_PIN

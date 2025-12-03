@@ -51,6 +51,8 @@ uint32_t powman_get_user_switches(void);
 bool powman_wake_reset(void);
 bool powman_wake_watchdog(void);
 
+bool psram_cs1_pullup_check(void);
+
 void powman_init();
 int powman_setup_gpio_wakeup(int hw_wakeup, int gpio, bool edge, bool high, uint64_t timeout_ms);
 int powman_off(void);

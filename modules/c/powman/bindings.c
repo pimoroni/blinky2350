@@ -186,6 +186,11 @@ mp_obj_t _sleep_goto_dormant_for(mp_obj_t time_seconds_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(_sleep_goto_dormant_for_obj, _sleep_goto_dormant_for);
 
+static mp_obj_t _test_psram_cs() {
+    return mp_obj_new_bool(psram_cs1_pullup_check());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(_test_psram_cs_obj, _test_psram_cs);
+
 static const mp_map_elem_t sleep_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_powman) },
     { MP_ROM_QSTR(MP_QSTR_sleep), MP_ROM_PTR(&_sleep_sleep_obj) },
@@ -194,6 +199,7 @@ static const mp_map_elem_t sleep_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_wake_reason), MP_ROM_PTR(&_sleep_get_wake_reason_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_wake_buttons), MP_ROM_PTR(&_sleep_get_wake_buttons_obj) },
     { MP_ROM_QSTR(MP_QSTR_shipping_mode), MP_ROM_PTR(&_shipping_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR__test_psram_cs), MP_ROM_PTR(&_test_psram_cs_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_WAKE_BUTTON_A), MP_ROM_INT(WAKE_BUTTON_A) },
     { MP_ROM_QSTR(MP_QSTR_WAKE_BUTTON_B), MP_ROM_INT(WAKE_BUTTON_B) },

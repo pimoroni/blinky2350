@@ -23,6 +23,18 @@ const uint led_gpios[4] = {BW_LED_1, BW_LED_2, BW_LED_3, BW_LED_0};
 
 //#define DEBUG
 
+static inline bool double_tap_flag_is_set(void) {
+    return powman_hw->chip_reset & POWMAN_CHIP_RESET_DOUBLE_TAP_BITS;
+}
+
+static inline void set_double_tap_flag(void) {
+    powman_set_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
+}
+
+static inline void clear_double_tap_flag(void) {
+    powman_clear_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
+}
+
 uint8_t powman_get_wake_reason(void) {
     // 0 = chip reset, for the source of the last reset see POWMAN_CHIP_RESET
     // 1 = pwrup0 (GPIO interrupt 0)
@@ -136,10 +148,9 @@ void powman_init() {
     // Does this accomplish *anything*?
     //pll_deinit(pll_sys);
 
-    // Set all pins to input (as far as SIO is concerned)
-    gpio_set_dir_all_bits(0);
     for (int i = 0; i < NUM_BANK0_GPIOS; ++i) {
         gpio_set_function(i, GPIO_FUNC_SIO);
+        gpio_set_dir(i, GPIO_IN);
         gpio_set_input_enabled(i, false);
         switch (i) {
             case 14:
@@ -208,6 +219,18 @@ void powman_init() {
 
     off_state = P1_7;
     on_state = P0_3;
+}
+
+bool __no_inline_not_in_flash_func(psram_cs1_pullup_check)(void) {
+    uint32_t intr_stash = save_and_disable_interrupts();
+    gpio_init(BW_PSRAM_CS);                         // Init to SIO / IN
+    gpio_set_pulls(BW_PSRAM_CS, false, true);       // Pull down
+    sleep_us(100);
+    bool pin_state = gpio_get(BW_PSRAM_CS) == 1;    // Check if pin is strongly pulled up
+    gpio_set_pulls(BW_PSRAM_CS, false, false);      // Disable pulls
+    gpio_set_function(BW_PSRAM_CS, GPIO_FUNC_XIP_CS1);  // Return the CS pin to the correct function
+    restore_interrupts(intr_stash);
+    return pin_state;
 }
 
 // Initiate power off
@@ -286,18 +309,6 @@ int powman_off_for_ms(uint64_t duration_ms) {
     return powman_off_until_time(ms + duration_ms);
 }
 
-static inline bool double_tap_flag_is_set(void) {
-    return powman_hw->chip_reset & POWMAN_CHIP_RESET_DOUBLE_TAP_BITS;
-}
-
-static inline void set_double_tap_flag(void) {
-    powman_set_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
-}
-
-static inline void clear_double_tap_flag(void) {
-    powman_clear_bits(&powman_hw->chip_reset, POWMAN_CHIP_RESET_DOUBLE_TAP_BITS);
-}
-
 static inline void setup_gpio(bool buttons_only) {
     // Init all button GPIOs
     gpio_init_mask(BW_SWITCH_MASK);
@@ -332,10 +343,11 @@ static inline void setup_gpio(bool buttons_only) {
     gpio_set_dir(BW_VBUS_DETECT, GPIO_IN);
     gpio_set_pulls(BW_VBUS_DETECT, false, false);
 
+    // Moved to RM2
     // Init the charge status detect
-    gpio_init(BW_CHARGE_STAT);
-    gpio_set_dir(BW_CHARGE_STAT, GPIO_IN);
-    gpio_set_pulls(BW_CHARGE_STAT, false, false);
+    // gpio_init(BW_CHARGE_STAT);
+    // gpio_set_dir(BW_CHARGE_STAT, GPIO_IN);
+    // gpio_set_pulls(BW_CHARGE_STAT, true, false);
 
     // Set up LEDs
     gpio_init_mask(0b1111);
