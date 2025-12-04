@@ -3,6 +3,13 @@ import cppmem
 # Switch C++ memory allocations to use MicroPython's heap
 cppmem.set_mode(cppmem.MICROPYTHON)
 
+try:
+    with open("hardware_test.txt", "r"):
+        import hardware_test   # noqa F401
+except OSError:
+    pass
+
+
 def copy_files():
     # Copy default files from readonly /system to editable /
     default_files = ["main.py", "secrets.py"]
@@ -22,5 +29,17 @@ def copy_files():
                         main.write(buf[:length])
 
 
-if powman.get_wake_reason() in (powman.WAKE_WATCHDOG, powman.WAKE_RESET):
+if powman.get_wake_reason() == powman.WAKE_WATCHDOG:
     copy_files()
+
+
+import picovector
+import builtins
+
+# Import PicoSystem module constants to builtins,
+# so they are available globally.
+for k, v in picovector.__dict__.items():
+    if not k.startswith("__"):
+        setattr(builtins, k, v)
+
+setattr(builtins, "screen", picovector.screen)
