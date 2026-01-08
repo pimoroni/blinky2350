@@ -1,4 +1,3 @@
-import math
 
 # bright icon colours
 bold = [
@@ -22,7 +21,7 @@ faded = [
 ]
 
 # icon shape
-squircle = shape.squircle(0, 0, 20, 4)
+squircle = shape.squircle(0, 0, 5, 2)
 shade_brush = color.rgb(0, 0, 0, 30)
 
 
@@ -51,44 +50,24 @@ class Icon:
         sprite_width = self.icon.width
         sprite_offset = sprite_width / 2
 
-        if self.spin:
-            # create a spin animation that runs over 100ms
-            speed = 100
-            frame = io.ticks - self.spin_start
-
-            # calculate the width of the tile during this part of the animation
-            width = round(math.cos(frame / speed) * 3) / 3
-
-            # ensure the width never reduces to zero or the icon disappears
-            width = max(0.1, width) if width > 0 else min(-0.1, width)
-
-            # determine how to offset and scale the sprite to match the tile width
-            sprite_width = width * self.icon.width
-            sprite_offset = abs(sprite_width) / 2
-
-            # once the animation has completed unset the spin flag
-            if frame > (speed * 6):
-                self.spin = False
-
-        # transform to the icon position
-        squircle.transform = mat3().translate(*self.pos).scale(width, 1)
-
-        # draw the icon shading
-        screen.pen = shade_brush
-        squircle.transform = squircle.transform.scale(1.1, 1.1)
-        screen.shape(squircle)
-
-        # draw the icon body
-        squircle.transform = squircle.transform.scale(1 / 1.1, 1 / 1.1)
-        if self.active:
-            screen.pen = bold[self.index]
-        else:
-            screen.pen = faded[self.index]
-        squircle.transform = squircle.transform.translate(-1, -1)
-        screen.shape(squircle)
-        squircle.transform = squircle.transform.translate(2, 2)
-        screen.pen = shade_brush
-        screen.shape(squircle)
+#         if self.spin:
+#             # create a spin animation that runs over 100ms
+#             speed = 300
+#             frame = io.ticks - self.spin_start
+#
+#             # calculate the width of the tile during this part of the animation
+#             width = round(math.cos(frame / speed) * 3) / 3
+#
+#             # ensure the width never reduces to zero or the icon disappears
+#             width = max(0.1, width) if width > 0 else min(-0.1, width)
+#
+#             # determine how to offset and scale the sprite to match the tile width
+#             sprite_width = width * self.icon.width
+#             sprite_offset = abs(sprite_width) / 2
+#
+#             # once the animation has completed unset the spin flag
+#             if frame > (speed * 6):
+#                 self.spin = False
 
         # draw the icon sprite
         if sprite_width > 0:
@@ -96,5 +75,5 @@ class Icon:
             screen.blit(
                 self.icon,
                 point(self.pos[0] - sprite_offset - 1,
-                self.pos[1] - 13)
+                      self.pos[1] - 13)
             )
