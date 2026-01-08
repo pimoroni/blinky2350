@@ -1,7 +1,6 @@
-SCRIPT_PATH="$(dirname $0)"
+SCRIPT_PATH=${BASH_SOURCE-$0}
+SCRIPT_PATH=$(dirname "$SCRIPT_PATH")
 SCRIPT_PATH=$(realpath "$SCRIPT_PATH")
-
-echo "$SCRIPT_PATH"
 
 function qa_prepare_all {
     pip install ruff
