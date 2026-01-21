@@ -6,18 +6,19 @@
 namespace picovector {
 
   // empty implementations for unsupported modes
-  void pixel_func_nop(brush_t *brush, int x, int y) {}
-  void span_func_nop(brush_t *brush, int x, int y, int w) {}
+  void pixel_func_nop(image_t *target, brush_t *brush, int x, int y) {}
+  void span_func_nop(image_t *target, brush_t *brush, int x, int y, int w) {}
+  void mask_span_func_nop(image_t *target, brush_t *brush, int x, int y, int w, uint8_t *m) {}
 
   // copies the source color over the destination colour, ignoring alpha
-  void color_pixel_func_rgba_rgba_copy(brush_t *brush, int x, int y) {
+  void color_pixel_func_rgba_rgba_copy(image_t *target, brush_t *brush, int x, int y) {
     color_brush_t *p = (color_brush_t*)brush;
-    uint32_t *dst = (uint32_t*)brush->target->ptr(x, y);
+    uint32_t *dst = (uint32_t*)target->ptr(x, y);
     *dst = p->c;
   }
-  void color_span_func_rgba_rgba_copy(brush_t *brush, int x, int y, int w) {
+  void color_span_func_rgba_rgba_copy(image_t *target, brush_t *brush, int x, int y, int w) {
     color_brush_t *p = (color_brush_t*)brush;
-    uint32_t *dst = (uint32_t*)brush->target->ptr(x, y);
+    uint32_t *dst = (uint32_t*)target->ptr(x, y);
     int dw8 = w >> 3;   // number of blocks of eight pixels
     int r = w & 0b111;  // remainder
     uint32_t c = p->c;
@@ -31,19 +32,31 @@ namespace picovector {
   }
 
   // blend the source colour over the destination colour
-  void color_pixel_func_rgba_rgba_blend(brush_t *brush, int x, int y) {
+  void color_pixel_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y) {
     color_brush_t *p = (color_brush_t*)brush;
-    blend_rgba_rgba((uint8_t*)brush->target->ptr(x, y), p->r, p->g, p->b, p->a);
+    blend_rgba_rgba((uint8_t*)target->ptr(x, y), p->r, p->g, p->b, p->a);
   }
-  void color_span_func_rgba_rgba_blend(brush_t *brush, int x, int y, int w) {
+  void color_span_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y, int w) {
     color_brush_t *p = (color_brush_t*)brush;
-    span_blend_rgba_rgba((uint8_t*)brush->target->ptr(x, y), (uint8_t*)&p->c, w);
+    span_blend_rgba_rgba((uint8_t*)target->ptr(x, y), (uint8_t*)&p->c, w);
   }
-  void color_mask_span_func_rgba_rgba_blend(brush_t *brush,  int x, int y, int w, uint8_t *mask) {
+  void color_mask_span_func_rgba_rgba_blend(image_t *target, brush_t *brush,  int x, int y, int w, uint8_t *mask) {
     color_brush_t *p = (color_brush_t*)brush;
-    mask_span_blend_rgba_rgba((uint8_t*)brush->target->ptr(x, y), (uint8_t*)&p->c, w, mask);
+    mask_span_blend_rgba_rgba((uint8_t*)target->ptr(x, y), (uint8_t*)&p->c, w, mask);
   }
 
+  pixel_func_t color_brush_t::get_pixel_func(image_t *target) {
+    return color_pixel_func_rgba_rgba_blend;
+  };
+
+  span_func_t color_brush_t::get_span_func(image_t *target) {
+    return color_span_func_rgba_rgba_blend;
+  };
+
+  mask_span_func_t color_brush_t::get_mask_span_func(image_t *target) {
+    return color_mask_span_func_rgba_rgba_blend;
+  }
+/*
   color_brush_t::color_brush_t(image_t *target, uint32_t c) : brush_t(target), c(c) {
     if(target->has_palette()) {
       assert(false && "color brush on paletted image is not supported");
@@ -66,11 +79,12 @@ namespace picovector {
       }
     }
   }
+    */
 
   // blend the source colour over the destination colour
-  void pattern_pixel_func_rgba_rgba_blend(brush_t *brush, int x, int y) {
+  void pattern_pixel_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y) {
     pattern_brush_t *p = (pattern_brush_t*)brush;
-    uint8_t *dst = (uint8_t*)brush->target->ptr(x, y);
+    uint8_t *dst = (uint8_t*)target->ptr(x, y);
     uint8_t u = 7 - (x & 0b111);
     uint8_t v = y & 0b111;
     uint8_t b = p->p[v];
@@ -78,9 +92,9 @@ namespace picovector {
     blend_rgba_rgba(dst, src[0], src[1], src[2], src[3]);
   }
 
-  void pattern_span_func_rgba_rgba_blend(brush_t *brush, int x, int y, int w) {
+  void pattern_span_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y, int w) {
     pattern_brush_t *p = (pattern_brush_t*)brush;
-    uint8_t *dst = (uint8_t*)brush->target->ptr(x, y);
+    uint8_t *dst = (uint8_t*)target->ptr(x, y);
     while(w--) {
       uint8_t u = 7 - (x & 0b111);
       uint8_t v = y & 0b111;
@@ -91,9 +105,9 @@ namespace picovector {
       x++;
     }
   }
-  void pattern_mask_span_func_rgba_rgba_blend(brush_t *brush, int x, int y, int w, uint8_t *mask) {
+  void pattern_mask_span_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y, int w, uint8_t *mask) {
     pattern_brush_t *p = (pattern_brush_t*)brush;
-    uint8_t *dst = (uint8_t*)brush->target->ptr(x, y);
+    uint8_t *dst = (uint8_t*)target->ptr(x, y);
     while(w--) {
       uint8_t u = 7 - (x & 0b111);
       uint8_t v = y & 0b111;
@@ -108,9 +122,23 @@ namespace picovector {
     }
   }
 
-  pattern_brush_t::pattern_brush_t(image_t *target, uint32_t c1, uint32_t c2, uint8_t pattern_index) : brush_t(target), c1(c1), c2(c2) {
+  pattern_brush_t::pattern_brush_t(uint32_t c1, uint32_t c2, uint8_t pattern_index) : c1(c1), c2(c2) {
     memcpy(this->p, &patterns[pattern_index], sizeof(uint8_t) * 8);
+  }
 
+  pixel_func_t pattern_brush_t::get_pixel_func(image_t *target) {
+    return pattern_pixel_func_rgba_rgba_blend;
+  };
+
+  span_func_t pattern_brush_t::get_span_func(image_t *target) {
+    return pattern_span_func_rgba_rgba_blend;
+  };
+
+  mask_span_func_t pattern_brush_t::get_mask_span_func(image_t *target) {
+    return pattern_mask_span_func_rgba_rgba_blend;
+  }
+/*
+  pattern_brush_t::prepare(image_t *target) {
     if(target->has_palette()) {
       assert(false && "pattern brush on paletted image is not supported");
       pixel_func = pixel_func_nop;
@@ -121,39 +149,29 @@ namespace picovector {
       mask_span_func = pattern_mask_span_func_rgba_rgba_blend;
     }
   }
-
-  pattern_brush_t::pattern_brush_t(image_t *target, uint32_t c1, uint32_t c2, uint8_t *pattern) : brush_t(target), c1(c1), c2(c2) {
+    */
+  pattern_brush_t::pattern_brush_t(uint32_t c1, uint32_t c2, uint8_t *pattern) : c1(c1), c2(c2) {
     memcpy(this->p, pattern, sizeof(uint8_t) * 8);
-
-    if(target->has_palette()) {
-      assert(false && "pattern brush on paletted image is not supported");
-      pixel_func = pixel_func_nop;
-      span_func = span_func_nop;
-    }else{
-      pixel_func = pattern_pixel_func_rgba_rgba_blend;
-      span_func = pattern_span_func_rgba_rgba_blend;
-      mask_span_func = pattern_mask_span_func_rgba_rgba_blend;
-    }
   }
 
   // blend the source colour over the destination colour
-  void image_pixel_func_rgba_rgba_blend(brush_t *brush, int x, int y) {
+  void image_pixel_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y) {
     // currently a NOP
   }
 
-  void image_span_func_rgba_rgba_blend(brush_t *brush, int x, int y, int w) {
+  void image_span_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y, int w) {
     image_brush_t *p = (image_brush_t*)brush;
-    uint8_t *dst = (uint8_t*)brush->target->ptr(x, y);
+    uint8_t *dst = (uint8_t*)target->ptr(x, y);
     rect_t b = p->src->bounds();
 
-    fx16_point_t p1(x, y);
-    fx16_point_t p2((x + w), y);
+    fx16_vec2_t p1(x, y);
+    fx16_vec2_t p2((x + w), y);
 
     p1 = p1.transform(&p->inverse_transform);
     p2 = p2.transform(&p->inverse_transform);
 
-    fx16_point_t pd((p2.x - p1.x) / w, (p2.y - p1.y) / w);
-    fx16_point_t pt = p1;
+    fx16_vec2_t pd((p2.x - p1.x) / w, (p2.y - p1.y) / w);
+    fx16_vec2_t pt = p1;
 
     int tw = int(b.w);
     int th = int(b.h);
@@ -170,19 +188,19 @@ namespace picovector {
     }
   }
 
-  void image_mask_span_func_rgba_rgba_blend(brush_t *brush, int x, int y, int w, uint8_t *mask) {
+  void image_mask_span_func_rgba_rgba_blend(image_t *target, brush_t *brush, int x, int y, int w, uint8_t *mask) {
     image_brush_t *p = (image_brush_t*)brush;
-    uint8_t *dst = (uint8_t*)brush->target->ptr(x, y);
+    uint8_t *dst = (uint8_t*)target->ptr(x, y);
     rect_t b = p->src->bounds();
 
-    fx16_point_t p1(x, y);
-    fx16_point_t p2((x + w), y);
+    fx16_vec2_t p1(x, y);
+    fx16_vec2_t p2((x + w), y);
 
     p1 = p1.transform(&p->inverse_transform);
     p2 = p2.transform(&p->inverse_transform);
 
-    fx16_point_t pd((p2.x - p1.x) / w, (p2.y - p1.y) / w);
-    fx16_point_t pt = p1;
+    fx16_vec2_t pd((p2.x - p1.x) / w, (p2.y - p1.y) / w);
+    fx16_vec2_t pt = p1;
 
     int tw = int(b.w);
     int th = int(b.h);
@@ -202,7 +220,11 @@ namespace picovector {
     }
   }
 
-  image_brush_t::image_brush_t(image_t *target, image_t *src) : brush_t(target), src(src) {
+  image_brush_t::image_brush_t(image_t *src) : src(src) {
+
+  }
+  /*
+  image_brush_t::prepare(image_t *target) {
     if(target->has_palette()) {
       assert(false && "image brush on paletted image is not supported");
       pixel_func = pixel_func_nop;
@@ -213,22 +235,25 @@ namespace picovector {
       mask_span_func = image_mask_span_func_rgba_rgba_blend;
     }
   }
+    */
 
-  image_brush_t::image_brush_t(image_t *target, image_t *src, mat3_t *transform) : brush_t(target), src(src) {
+  image_brush_t::image_brush_t(image_t *src, mat3_t *transform) : src(src) {
     if(transform) {
       inverse_transform = *transform;
       inverse_transform.inverse();
     }
+  }
 
-    if(target->has_palette()) {
-      assert(false && "image brush on paletted image is not supported");
-      pixel_func = pixel_func_nop;
-      span_func = span_func_nop;
-    }else{
-      pixel_func = image_pixel_func_rgba_rgba_blend;
-      span_func = image_span_func_rgba_rgba_blend;
-      mask_span_func = image_mask_span_func_rgba_rgba_blend;
-    }
+  pixel_func_t image_brush_t::get_pixel_func(image_t *target) {
+    return pixel_func_nop;
+  };
+
+  span_func_t image_brush_t::get_span_func(image_t *target) {
+    return image_span_func_rgba_rgba_blend;
+  };
+
+  mask_span_func_t image_brush_t::get_mask_span_func(image_t *target) {
+    return image_mask_span_func_rgba_rgba_blend;
   }
 
 

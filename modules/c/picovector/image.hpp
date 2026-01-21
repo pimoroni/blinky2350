@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 #include "picovector.config.hpp"
 #include "types.hpp"
@@ -10,12 +11,24 @@ using std::vector;
 
 namespace picovector {
 
+  class image_t;
+  struct brush_t;
+
+  // empty implementations for unsupported modes
+  void pixel_func_nop(image_t *target, brush_t *brush, int x, int y);
+  void span_func_nop(image_t *target, brush_t *brush, int x, int y, int w);
+  void mask_span_func_nop(image_t *target, brush_t *brush, int x, int y, int w, uint8_t *m);
+
+  typedef void (*pixel_func_t)(image_t *target, brush_t *brush, int x, int y);
+  typedef void (*span_func_t)(image_t *target, brush_t *brush, int x, int y, int w);
+  typedef void (*mask_span_func_t)(image_t *target, brush_t *brush, int x, int y, int w, uint8_t *mask);
+
   typedef enum antialias_t {
-    OFF   = 1,
-    LOW   = 2,
-    X2    = 2,
-    HIGH  = 4,
-    X4    = 4
+    OFF   = 0,
+    LOW   = 1,
+    X2    = 1,
+    HIGH  = 2,
+    X4    = 2
   } antialias_t;
 
   typedef enum pixel_format_t {
@@ -50,6 +63,10 @@ namespace picovector {
       palette_t       _palette;
 
     public:
+      pixel_func_t    _pixel_func = pixel_func_nop;
+      span_func_t     _span_func = span_func_nop;
+      mask_span_func_t _mask_span_func = mask_span_func_nop;
+
       image_t();
       image_t(image_t *source, rect_t r);
       image_t(int w, int h, pixel_format_t pixel_format=RGBA8888, bool has_palette=false);
@@ -99,18 +116,21 @@ namespace picovector {
       void clear();
       //void clear(uint32_t c);
       void rectangle(rect_t r);
-      void triangle(point_t p1, point_t p2, point_t p3);
+      void triangle(vec2_t p1, vec2_t p2, vec2_t p3);
       void round_rectangle(const rect_t &r, int radius);
-      void circle(const point_t &p, const int &r);
-      void ellipse(const point_t &p, const int &rx, const int &ry);
-      void line(point_t p1, point_t p2);
-      void put(const point_t &p1);
+      void circle(const vec2_t &p, const int &r);
+      void ellipse(const vec2_t &p, const int &rx, const int &ry);
+      void line(vec2_t p1, vec2_t p2);
+      void put(const vec2_t &p1);
       void put(int x, int y);
       void put_unsafe(int x, int y);
-      uint32_t get(const point_t &p1);
+      uint32_t get(const vec2_t &p1);
       uint32_t get(int x, int y);
       uint32_t get_unsafe(int x, int y);
 
+      // image filters
+      void blur(float radius);
+      void dither();
 // pixel(x, y, col) or set(x, y, col)
 // 	•	line(x0, y0, x1, y1)
 // 	•	rect(x, y, w, h)
@@ -126,13 +146,13 @@ namespace picovector {
 
 
       void draw(shape_t *shape);
-      void blit(image_t *t, const point_t p);
+      void blit(image_t *t, const vec2_t p);
       void blit(image_t *t, rect_t tr);
       void blit(image_t *t, rect_t sr, rect_t tr);
 
 
 
-      void vspan_tex(image_t *target, point_t p, uint c, point_t uvs, point_t uve);
+      void vspan_tex(image_t *target, vec2_t p, uint c, vec2_t uvs, vec2_t uve);
   };
 
 }

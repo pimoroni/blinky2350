@@ -2,6 +2,7 @@
 
 #include "mp_helpers.hpp"
 #include "picovector.hpp"
+#include "../blend.hpp"
 
 extern "C" {
 
@@ -19,6 +20,7 @@ extern "C" {
 
   MPY_BIND_STATICMETHOD_VAR(3, hsv, {
     int h = (int)mp_obj_get_float(args[0]);
+    h = fmod(h, 360.0f);
     int s = (int)mp_obj_get_float(args[1]);
     int v = (int)mp_obj_get_float(args[2]);
     int a = n_args > 3 ? (int)mp_obj_get_float(args[3]) : 255;
@@ -138,6 +140,16 @@ extern "C" {
     dest[1] = MP_OBJ_SENTINEL;
   }
 
+  static void color_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+    self(self_in, color_obj_t);
+
+    if(get_a(&self->c) == 255) {
+      mp_printf(print, "color(r=%d, g=%d, b=%d)", get_r(&self->c), get_g(&self->c), get_b(&self->c));
+    }else{
+      mp_printf(print, "color(r=%d, g=%d, b=%d, a=%d)", get_r(&self->c), get_g(&self->c), get_b(&self->c), get_a(&self->c));
+    }
+  }
+
   // default palette based on Dawnbringer 16
   const color_obj_t color_black_obj  = {.base = {.type = &type_color}, .c = 0xff281e14u};
   const color_obj_t color_grape_obj  = {.base = {.type = &type_color}, .c = 0xff342444u};
@@ -155,6 +167,10 @@ extern "C" {
   const color_obj_t color_cyan_obj   = {.base = {.type = &type_color}, .c = 0xffcac26du};
   const color_obj_t color_yellow_obj = {.base = {.type = &type_color}, .c = 0xff5ed4dau};
   const color_obj_t color_white_obj  = {.base = {.type = &type_color}, .c = 0xffd6eedeu};
+
+  // badger E-ink specific greys
+  const color_obj_t color_light_grey_obj  = {.base = {.type = &type_color}, .c = 0xffc0c0c0u};
+  const color_obj_t color_dark_grey_obj   = {.base = {.type = &type_color}, .c = 0xff404040u};
 
   MPY_BIND_LOCALS_DICT(color,
     // static color generators
@@ -183,12 +199,17 @@ extern "C" {
     { MP_ROM_QSTR(MP_QSTR_cyan),   MP_ROM_PTR(&color_cyan_obj) },
     { MP_ROM_QSTR(MP_QSTR_yellow), MP_ROM_PTR(&color_yellow_obj) },
     { MP_ROM_QSTR(MP_QSTR_white),  MP_ROM_PTR(&color_white_obj) },
+
+    // badger E-ink specific greys
+    { MP_ROM_QSTR(MP_QSTR_light_grey),  MP_ROM_PTR(&color_light_grey_obj) },
+    { MP_ROM_QSTR(MP_QSTR_dark_grey),  MP_ROM_PTR(&color_dark_grey_obj) },
   )
 
   MP_DEFINE_CONST_OBJ_TYPE(
       type_color,
       MP_QSTR_color,
       MP_TYPE_FLAG_NONE,
+      print, (const void *)color_print,
       attr, (const void *)attr,
       locals_dict, &color_locals_dict
   );

@@ -145,6 +145,9 @@ namespace picovector {
 
   void image_t::brush(brush_t *brush) {
     this->_brush = brush;
+    this->_pixel_func = brush->get_pixel_func(this);
+    this->_span_func = brush->get_span_func(this);
+    this->_mask_span_func = brush->get_mask_span_func(this);
   }
 
   font_t* image_t::font() {
@@ -192,13 +195,10 @@ namespace picovector {
   // }
 
   void image_t::clear() {
-    int count = this->_bounds.w * this->_bounds.h;
-    this->_brush->span_func(this->_brush, 0, 0, count);
-
-//    rectangle(_clip);
+    rectangle(_clip);
   }
 
-  void image_t::blit(image_t *t, const point_t p) {
+  void image_t::blit(image_t *t, const vec2_t p) {
     rect_t tr(p.x, p.y, _bounds.w, _bounds.h); // target rect
 
     int yoff = tr.y < t->_clip.y ? t->_clip.y - tr.y : 0;
@@ -231,7 +231,7 @@ namespace picovector {
     - uvs: the start coordinate of the texture
     - uve: the end coordinate of the texture
   */
-  void image_t::vspan_tex(image_t *target, point_t p, uint c, point_t uvs, point_t uve) {
+  void image_t::vspan_tex(image_t *target, vec2_t p, uint c, vec2_t uvs, vec2_t uve) {
     rect_t b = target->_clip;
     if(p.x < b.x || p.x > b.x + b.w) {
       return;
@@ -387,7 +387,7 @@ namespace picovector {
   void image_t::rectangle(rect_t r) {
     r = r.intersection(_clip);
     for(int y = r.y; y < r.y + r.h; y++) {
-      this->_brush->span_func(this->_brush, r.x, y, r.w);
+      this->_span_func(this, this->_brush, r.x, y, r.w);
       //this->_brush->render_span(this, r.x, y, r.w);
     }
   }
@@ -403,11 +403,11 @@ namespace picovector {
     if(x + w >= _clip.x + _clip.w) {
       w = _clip.x + _clip.w - x;
     }
-    this->_brush->span_func(this->_brush, x, y, w);
+    this->_span_func(this, this->_brush, x, y, w);
     //this->_brush->render_span(this, x, y, w);
   }
 
-  void image_t::circle(const point_t &p, const int &r) {
+  void image_t::circle(const vec2_t &p, const int &r) {
 
     rect_t b = rect_t(p.x - r, p.y - r, r * 2, r * 2);
     if(!b.intersects(_clip)) return;
@@ -435,18 +435,18 @@ namespace picovector {
     }
   }
 
-  int32_t orient2d(point_t p1, point_t p2, point_t p3) {
+  int32_t orient2d(vec2_t p1, vec2_t p2, vec2_t p3) {
     return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
   }
 
-  bool is_top_left(const point_t &p1, const point_t &p2) {
+  bool is_top_left(const vec2_t &p1, const vec2_t &p2) {
     return (p1.y == p2.y && p1.x > p2.x) || (p1.y < p2.y);
   }
 
-  void image_t::triangle(point_t p1, point_t p2, point_t p3) {
+  void image_t::triangle(vec2_t p1, vec2_t p2, vec2_t p3) {
     rect_t b(
-      point_t(min(p1.x, min(p2.x, p3.x)), min(p1.y, min(p2.y, p3.y))),
-      point_t(max(p1.x, max(p2.x, p3.x)), max(p1.y, max(p2.y, p3.y)))
+      vec2_t(min(p1.x, min(p2.x, p3.x)), min(p1.y, min(p2.y, p3.y))),
+      vec2_t(max(p1.x, max(p2.x, p3.x)), max(p1.y, max(p2.y, p3.y)))
     );
 
     // clip extremes to frame buffer size
@@ -458,7 +458,7 @@ namespace picovector {
     // fix "winding" of vertices if needed
     int32_t winding = orient2d(p1, p2, p3);
     if (winding < 0) {
-      point_t t;
+      vec2_t t;
       t = p1; p1 = p3; p3 = t;
     }
 
@@ -474,12 +474,12 @@ namespace picovector {
     int32_t a20 = p3.y - p1.y;
     int32_t b20 = p1.x - p3.x;
 
-    point_t tl(b.x, b.y);
+    vec2_t tl(b.x, b.y);
     int32_t w0row = orient2d(p2, p3, tl) + bias0;
     int32_t w1row = orient2d(p3, p1, tl) + bias1;
     int32_t w2row = orient2d(p1, p2, tl) + bias2;
 
-    pixel_func_t pf = this->_brush->pixel_func;
+    pixel_func_t pf = this->_pixel_func;
 
     for (int32_t y = 0; y < b.h; y++) {
       int32_t w0 = w0row;
@@ -490,7 +490,7 @@ namespace picovector {
       int yo = b.y + y;
       for (int32_t x = 0; x < b.w; x++) {
         if ((w0 | w1 | w2) >= 0) {
-          pf(this->_brush, xo, yo);
+          pf(this, this->_brush, xo, yo);
         }
 
         xo++;
@@ -507,12 +507,12 @@ namespace picovector {
   }
 
 
-  void ellipse(const point_t &p, const int &rx, const int &ry) {
+  void ellipse(const vec2_t &p, const int &rx, const int &ry) {
 
   }
 
 
-  void image_t::line(point_t p1, point_t p2) {
+  void image_t::line(vec2_t p1, vec2_t p2) {
     rect_t b = this->_clip;
     b.w -= 1;
     b.h -= 1; // TODO: this is hacky... fix it properly
@@ -531,10 +531,10 @@ namespace picovector {
     int sy = y0 < y1 ? 1 : -1;
     int err = dx + dy;
 
-    pixel_func_t pf = this->_brush->pixel_func;
+    pixel_func_t pf = this->_pixel_func;
 
     while(true) {
-        pf(this->_brush, x0, y0);
+        pf(this, this->_brush, x0, y0);
         if (x0 == x1 && y0 == y1) break;
         int e2 = 2 * err;
         if (e2 >= dy) {err += dy; x0 += sx;}
@@ -542,22 +542,22 @@ namespace picovector {
     }
   }
 
-  void image_t::put(const point_t &p) {
+  void image_t::put(const vec2_t &p) {
     this->put(p.x, p.y);
   }
 
   void image_t::put(int x, int y) {
     x = max(int(_clip.x), min(x, int(_clip.x + _clip.w - 1)));
     y = max(int(_clip.y), min(y, int(_clip.y + _clip.h - 1)));
-    this->_brush->pixel_func(this->_brush, x, y);
+    this->_pixel_func(this, this->_brush, x, y);
   }
 
   void image_t::put_unsafe(int x, int y) {
-    this->_brush->pixel_func(this->_brush, x, y);
+    this->_pixel_func(this, this->_brush, x, y);
     //this->_brush->render_span(this, x, y, 1);
   }
 
-  uint32_t image_t::get(const point_t &p) {
+  uint32_t image_t::get(const vec2_t &p) {
     return this->get(p.x, p.y);
   }
 
@@ -577,4 +577,40 @@ namespace picovector {
 
 
 
+
+  void image_t::dither() {
+    uint8_t m[16] = {
+      0, 136, 34, 170,
+      204, 68, 238, 102,
+      51, 187, 17, 153,
+      255, 119, 221, 85
+    };
+
+    uint8_t ca[4] = {64, 191, 191, 255};
+    uint8_t cb[4] = {0, 64, 64, 191};
+
+    int width = _bounds.w;
+    int height = _bounds.h;
+
+    for(int y = 0; y < height; y++) {
+      int y_lookup = (y & 0b11) << 2;
+      for(int x = 0; x < width; x++) {
+        int offset = ((y * width) + x) << 2;
+        uint8_t *p = (uint8_t*)(_buffer) + offset;
+
+        // luminence with green bias (crude but fast)
+        int pixel = (p[0] + (p[1] * 2) + p[2]) >> 2;
+        int scale = m[y_lookup | (x & 0b11)];
+
+        int a = ca[pixel >> 6];
+        int b = cb[pixel >> 6];
+
+        if(pixel > (b + ((a - b) * scale >> 8))) {
+          p[0] = p[1] = p[2] = a;
+        }else{
+          p[0] = p[1] = p[2] = b;
+        }
+      }
+    }
+  }
 }

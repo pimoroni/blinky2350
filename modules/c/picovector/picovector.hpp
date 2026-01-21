@@ -38,6 +38,7 @@ namespace picovector {
   struct brush_t;
   class image_t;
   class shape_t;
+  class glyph_t;
   class mat3_t;
 
   struct _rspan {
@@ -51,5 +52,6 @@ namespace picovector {
   };
 
   void render(shape_t *shape, image_t *target, mat3_t *transform, brush_t *brush);
+  void render_glyph(glyph_t *shape, image_t *target, mat3_t *transform, brush_t *brush);
 
 }

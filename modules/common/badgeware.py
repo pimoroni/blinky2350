@@ -14,8 +14,6 @@ import builtins
 
 import picovector
 
-display = blinky.Blinky()
-
 _CASE_LIGHTS = [machine.PWM(machine.Pin.board.CL0), machine.PWM(machine.Pin.board.CL1),
                 machine.PWM(machine.Pin.board.CL2), machine.PWM(machine.Pin.board.CL3)]
 
@@ -81,49 +79,110 @@ def time_from_ntp():
     localtime_to_rtc()
 
 
-# takes a text string (that may include newline characters) and performs word
-# wrapping. returns a line of lines and their widths as a result.
-def wrap_and_measure(image, text, size, max_width):
-    result = []
+def pen_glyph_renderer(image, parameters, cursor, measure):
+    if measure:
+        return 0
+    image.pen = color.rgb(*(int(c) for c in parameters))
+
+
+def text_tokenise(image, text, glyph_renderers=None):
+    WORD = 1
+    SPACE = 2
+    LINE_BREAK = 3
+
+    default_glyph_renderers = {"pen": pen_glyph_renderer}
+    default_glyph_renderers.update(glyph_renderers or {})
+
+    tokens = []
+
     for line in text.splitlines():
-        # if max_width is specified then perform word wrapping
-        if max_width:
-            # setup a start and end cursor to traverse the text
-            start, end = 0, 0
-            last_width = 0
-            i = 0
-            while True:
-                i += 1
-                # search for the next space
-                end = line.find(" ", end)
-                if end == -1:
-                    end = len(line)
+        start, end = 0, 0
+        i = 0
+        while end < len(line):
+            # check for a glyph_renderer
+            if default_glyph_renderers and line.find("[", start) == start:
+                glyph_end = line.find("]", start)
+                # look ahead to see if this is an escape code
+                glyph_renderer = line[start + 1:glyph_end]
+                parameters = []
+                if ":" in glyph_renderer:
+                    code, parameters = glyph_renderer.split(":")
+                    parameters = parameters.split(",")
+                else:
+                    code = glyph_renderer
 
-                # measure the text up to the space
-                width, _ = image.measure_text(line[start:end], size)
-                if width >= max_width:
-                    # line exceeded max length
-                    new_end = line.rfind(" ", start, end)
-                    if new_end == -1:
-                        result.append((line[start:end], last_width))
-                        start = end + 1
-                    else:
-                        result.append((line[start:new_end], last_width))
-                        start = new_end + 1
-                elif end == len(line):
-                    # reached the end of the string
-                    result.append((line[start:end], width))
-                    break
+                if code in default_glyph_renderers:
+                    w = default_glyph_renderers[code](None, parameters, None, True)
+                    tokens.append((default_glyph_renderers[code], w, tuple(parameters)))
+                    start = glyph_end + 1
+                    continue
 
-                # step past the last space
-                end += 1
-                last_width = width
+            i += 1
+
+            # search for the next space
+            end = line.find(" ", start)
+            if end == -1: end = len(line)
+
+            # measure the text up to the space
+            if end > start:
+                width, _ = image.measure_text(line[start:end])
+                tokens.append((WORD, width, line[start:end]))
+
+            start = end
+            if end < len(line) and line[end] == " ":
+                tokens.append((SPACE,))
+                start += 1
+
+        tokens.append((LINE_BREAK,))
+
+    return tokens
+
+
+def text_draw(image, text, bounds=None, line_spacing=1, word_spacing=1):
+    WORD = 1
+    SPACE = 2
+    LINE_BREAK = 3
+
+    if bounds is None:
+        bounds = rect(0, 0, image.width, image.height)
+    else:
+        bounds = rect(int(bounds.x), int(bounds.y), int(bounds.w), int(bounds.h))
+
+    if isinstance(text, str):
+        tokens = text_tokenise(image, text)
+    else:
+        tokens = text
+
+    old_clip = image.clip
+    image.clip = bounds
+
+    c = vec2(bounds.x, bounds.y)
+    b = rect()
+    for token in tokens:
+        if token[0] == WORD:
+            if c.x + token[1] > bounds.x + bounds.w:
+                c.x = bounds.x
+                c.y += image.font.height * line_spacing
+            image.text(token[2], c.x, c.y)
+            c.x += token[1]
+        elif token[0] == SPACE:
+            c.x += (image.font.height / 3) * word_spacing
+        elif token[0] == LINE_BREAK:
+            c.x = bounds.x
+            c.y += image.font.height * line_spacing
         else:
-            # no wrapping needed, just return the original line with its width
-            width, _ = image.measure_text(line, size)
-            result.append((line, width))
+            if c.x + token[1] > bounds.x + bounds.w:
+                c.x = bounds.x
+                c.y += image.font.height * line_spacing
 
-    return result
+            token[0](image, token[2], c, False)
+            c.x += token[1]
+
+        b.w = max(b.w, c.x)
+        b.h = max(b.h, c.y)
+
+    image.clip = old_clip
+    return b
 
 
 def clamp(v, vmin, vmax):
@@ -131,11 +190,14 @@ def clamp(v, vmin, vmax):
 
 
 def rnd(v1, v2=None):
-    return random.randint(v1, v2) if v2 is not None else random.randint(0, v1)
-
+    if v2:
+      return random.randint(v1, v2)
+    return random.randint(0, v1)
 
 def frnd(v1, v2=None):
-    return random.uniform(v1, v2) if v2 is not None else random.uniform(0, v1)
+    if v2:
+      return random.uniform(v1, v2)
+    return random.uniform(0, v1)
 
 
 def file_exists(path):
@@ -350,36 +412,36 @@ class State:
 
 
 def mode(mode, force=False):
-    # TODO: Possible hires mode with optional matrix transform or similar?
-    #       ie: hires working image gets blitted onto a lores screen.
     pass
 
 
 def run(update, init=None, on_exit=None, auto_clear=True):
     screen.font = DEFAULT_FONT
-    screen.clear(BG)
+    screen.pen = BG
+    screen.clear()
     screen.pen = FG
     try:
         if init:
             init()
+            gc.collect()
         try:
             while True:
                 if auto_clear:
-                    screen.clear(BG)
+                    screen.pen = BG
+                    screen.clear()
                     screen.pen = FG
                 io.poll()
                 if (result := update()) is not None:
+                    gc.collect()
                     return result
-                gc.collect()
                 display.update()
-        except KeyboardInterrupt:
-            pass
         finally:
             if on_exit:
                 on_exit()
+                gc.collect()
 
     except Exception as e:  # noqa: BLE001
-        warning("Error!", get_exception(e))
+        fatal_error("Error!", get_exception(e))
 
 
 def get_exception(e):
@@ -391,8 +453,8 @@ def get_exception(e):
 
 
 # Draw an overlay box with a given message within it
-def message(title, text, window=None):
-    error_window = window or screen.window(0, 0, screen.width, screen.height)
+def message(title, msg, window=None):
+    error_window = window or screen.window(5, 5, screen.width - 10, screen.height - 10)
     error_window.font = DEFAULT_FONT
 
     # Draw a light grey background
@@ -400,35 +462,53 @@ def message(title, text, window=None):
         0, 0, error_window.width, error_window.height, 5, 5, 5, 5
     )
     heading = shape.rounded_rectangle(0, 0, error_window.width, 12, 5, 5, 0, 0)
-    error_window.pen = color.rgb(100, 100, 100, 200)
+    error_window.pen = color.rgb(100, 100, 100, 240)
     error_window.shape(background)
 
-    error_window.pen = color.rgb(255, 100, 100, 200)
+    error_window.pen = color.rgb(255, 100, 100, 240)
     error_window.shape(heading)
 
     error_window.pen = color.rgb(50, 100, 50)
     tw = 35
     error_window.shape(
         shape.rounded_rectangle(
-            error_window.width - tw - 10, error_window.height - 12, tw, 12, 3, 3, 0, 0
+            error_window.width - tw - 36, error_window.height - 12, tw, 12, 3, 3, 0, 0
         )
     )
 
     error_window.pen = color.rgb(255, 200, 200)
     error_window.text(
-        "Okay", error_window.width - tw + 5 - 10, error_window.height - 12
+        "Okay", error_window.width - tw + 5 - 36, error_window.height - 12
     )
     y = 0
     error_window.text(title, 5, y)
     y += 17
 
     error_window.pen = color.rgb(200, 200, 200)
-    text_lines = wrap_and_measure(error_window, text, 12, error_window.width - 10)
-    for line, _width in text_lines:
-        error_window.text(line, 5, y)
-        y += 10
+    bounds = error_window.clip
+    bounds.y += 12
+    bounds.h -= 32
+    bounds.x += 5
+    bounds.w -= 10
 
-    display.update()
+    text_draw(error_window, msg, bounds=bounds)
+
+
+def fatal_error(title, error):
+    if not isinstance(error, str):
+        error = get_exception(error)
+    print(f"- ERROR: {error}")
+
+    if _current_mode == LORES:
+        contents = image(160, 120)
+        contents.blit(screen, vec2(0, 0))
+        mode(HIRES)
+        screen.blit(contents, rect(0, 0, 320, 240))
+        del contents
+
+    message(title, error)
+
+    display.update(screen.width == 320)
     while True:
         io.poll()
         if io.pressed:
@@ -436,17 +516,26 @@ def message(title, text, window=None):
     while io.pressed:
         io.poll()
 
-
-def warning(title, text):
-    print(f"- ERROR: {text}")
-    message(title, text)
+    machine.reset()
 
 
 def load_font(font_file):
-    try:
-        return pixel_font.load(font_file)
-    except OSError:
-        return pixel_font.load(f"/rom/fonts/{font_file}.ppf")
+    search_paths = ("/rom/fonts", "/system/assets/fonts", "/fonts", "/assets", "")
+    file = font_file
+
+    # Remove /rom/fonts if searching for .af files
+    if file.endswith(".af"):
+        search_paths = search_paths[1:]
+
+    extensions = (".af", ".ppf") if not file.endswith(".af") and not file.endswith(".ppf") else ("", )
+
+    for search_path in search_paths:
+        for ext in extensions:
+            path = search_path + f"/{file}{ext}"
+            if file_exists(path) and not is_dir(path):
+                return font.load(path) if path.endswith(".af") else pixel_font.load(path)
+
+    raise OSError(f"Font \"{font_file}\" not found!")
 
 
 class ROMFonts:
@@ -471,6 +560,8 @@ if time.localtime()[0] >= 2025:
 elif rtc.datetime()[0] >= 2025:
     rtc_to_localtime()
 
+
+display = blinky.Blinky()
 
 # Import PicoSystem module constants to builtins,
 # so they are available globally.
@@ -502,18 +593,17 @@ conversion_factor = 3.3 / 65536
 setattr(builtins, "screen", image(display.WIDTH, display.HEIGHT, memoryview(display)))  # noqa: B010
 screen.font = DEFAULT_FONT
 screen.pen = BG
-picovector.default_target = screen
 
 
 # Build in some badgeware helpers, so we don't have to "bw.lores" etc
 # note HIRES and LORES and mode are currently unused for Blinky
-for k in ("mode", "HIRES", "LORES", "SpriteSheet", "load_font", "rom_font", "clamp", "rnd", "frnd"):
+for k in ("mode", "HIRES", "LORES", "SpriteSheet", "load_font", "rom_font", "text_tokenise", "text_draw", "clamp", "rnd", "frnd"):
     setattr(builtins, k, locals()[k])  # noqa: B010
 
 
 # Finally, build in badgeware as "bw" for less frequently used things
-setattr(builtins, "bw", sys.modules["badgeware"])  # noqa: B010
+builtins.bw = sys.modules["badgeware"]
 
 
 if __name__ == "__main__":
-    warning("Hello from badgeware.py", "Why are you running me?")
+    fatal_error("Hello from badgeware.py", "Why are you running me?")

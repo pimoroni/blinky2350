@@ -23,6 +23,8 @@ mp_obj_t ticks;
   uint8_t picovector_changed_buttons;
   mp_uint_t picovector_ticks;
   mp_uint_t picovector_last_ticks;
+
+  extern uint32_t powman_get_user_switches(void);
 #else
   extern uint8_t picovector_buttons;
   extern uint8_t picovector_changed_buttons;
@@ -99,6 +101,19 @@ mp_obj_t ticks;
   MPY_BIND_ARGS0(poll, {
 #ifdef PICO
     uint8_t buttons = 0;
+
+    // Feed the switch states from wakeup into `pressed`
+    static bool got_wakeup_switches = false;
+    if(!got_wakeup_switches) {
+      uint32_t user_sw = powman_get_user_switches();
+      if(user_sw & (1 << BW_SWITCH_A))    buttons |= BUTTON_A;
+      if(user_sw & (1 << BW_SWITCH_B))    buttons |= BUTTON_B;
+      if(user_sw & (1 << BW_SWITCH_C))    buttons |= BUTTON_C;
+      if(user_sw & (1 << BW_SWITCH_UP))   buttons |= BUTTON_UP;
+      if(user_sw & (1 << BW_SWITCH_DOWN)) buttons |= BUTTON_DOWN;
+      got_wakeup_switches = true;
+    }
+
     buttons |= gpio_get(BW_SWITCH_A)    ? 0 : BUTTON_A;
     buttons |= gpio_get(BW_SWITCH_B)    ? 0 : BUTTON_B;
     buttons |= gpio_get(BW_SWITCH_C)    ? 0 : BUTTON_C;

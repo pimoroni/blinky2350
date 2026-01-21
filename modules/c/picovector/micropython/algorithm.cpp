@@ -7,48 +7,77 @@ extern "C" {
   #include "py/runtime.h"
 
   MPY_BIND_STATICMETHOD_VAR(3, clip_line, {
-    point_obj_t *p1 = (point_obj_t *)MP_OBJ_TO_PTR(args[0]);
-    point_obj_t *p2 = (point_obj_t *)MP_OBJ_TO_PTR(args[1]);
+    vec2_obj_t *p1 = (vec2_obj_t *)MP_OBJ_TO_PTR(args[0]);
+    vec2_obj_t *p2 = (vec2_obj_t *)MP_OBJ_TO_PTR(args[1]);
     const rect_obj_t *r = (rect_obj_t *)MP_OBJ_TO_PTR(args[2]);
 
-    bool result = clip_line(p1->point, p2->point, r->rect);
+    bool result = clip_line(p1->v, p2->v, r->r);
     return mp_obj_new_bool(result);
   })
 
-  MPY_BIND_STATICMETHOD_VAR(2, dda, {
-    point_obj_t *p = (point_obj_t *)MP_OBJ_TO_PTR(args[0]);
-    point_obj_t *v = (point_obj_t *)MP_OBJ_TO_PTR(args[1]);
-    int max = mp_obj_get_int(args[2]);
+  MPY_BIND_STATICMETHOD_VAR(5, dda, {
+    vec2_obj_t *p = (vec2_obj_t *)MP_OBJ_TO_PTR(args[0]);
+    float angle = mp_obj_get_float(args[1]);
+    float fov = mp_obj_get_float(args[2]);
+    int rays = mp_obj_get_int(args[3]);
+    int max = mp_obj_get_int(args[4]);
 
-    mp_obj_t result = mp_obj_new_list(max, NULL);
-    int i = 0;
+    mp_buffer_info_t map;
+    mp_get_buffer_raise(args[5], &map, MP_BUFFER_RW);
+    uint8_t *data = (uint8_t *)map.buf;
 
-    dda(p->point, v->point, [&result, &i, max](float hit_x, float hit_y, int gx, int gy, int edge, float offset, float distance) -> bool {
-      // add hit to result and return false when done
-      mp_obj_tuple_t *t = (mp_obj_tuple_t*)MP_OBJ_TO_PTR(mp_obj_new_tuple(5, NULL));
+    int width = mp_obj_get_int(args[6]);
+    int height = mp_obj_get_int(args[7]);
 
-      point_obj_t *p = mp_obj_malloc_with_finaliser(point_obj_t, &type_point);
-      p->point.x = hit_x;
-      p->point.y = hit_y;
+    mp_obj_t *result = new mp_obj_t[rays];
 
-      point_obj_t *g = mp_obj_malloc_with_finaliser(point_obj_t, &type_point);
-      g->point.x = gx;
-      g->point.y = gy;
+    for(int i = 0; i < rays; i++) {
+      float offset = float((i - (rays / 2.0f)) / (rays / 2.0f)) * fov / 2.0f;
 
-      t->items[0] = MP_OBJ_FROM_PTR(p);
-      t->items[1] = MP_OBJ_FROM_PTR(g);
-      t->items[2] = mp_obj_new_int(edge);
-      t->items[3] = mp_obj_new_float(offset);
-      t->items[4] = mp_obj_new_float(distance);
+      vec2_t v = vec2_t(cos((angle + offset) * (M_PI / 180.0f)), sin((angle + offset) * (M_PI / 180.0f)));
 
-      mp_obj_list_store(result, mp_obj_new_int(i), MP_OBJ_FROM_PTR(t));
-      i++;
-      return i < max;
-    });
+      int step = 0;
 
-    return result;
+      mp_obj_t ray = mp_obj_new_list(0, NULL);
+
+      dda(p->v, v, [&step, &data, &width, &ray, &max](float hit_x, float hit_y, int gx, int gy, int edge, float offset, float distance) -> bool {
+        vec2_obj_t *cb_p = mp_obj_malloc(vec2_obj_t, &type_vec2);
+        vec2_obj_t *cb_g = mp_obj_malloc(vec2_obj_t, &type_vec2);
+
+        cb_p->v.x = hit_x;
+        cb_p->v.y = hit_y;
+
+        cb_g->v.x = gx;
+        cb_g->v.y = gy;
+
+        if(data[(gy * width) + gx] > 0) {
+
+          mp_obj_t items[6] = {
+            mp_obj_new_int(data[(gy * width) + gx]),
+            MP_OBJ_FROM_PTR(cb_p),
+            MP_OBJ_FROM_PTR(cb_g),
+            mp_obj_new_int(edge),
+            mp_obj_new_float(offset),
+            mp_obj_new_float(distance)
+          };
+
+          mp_obj_list_append(ray, mp_obj_new_tuple(6, items));
+
+          if(data[(gy * width) + gx] >= 128) {
+            return false;
+          }
+        }
+
+        step++;
+
+        return step < max;
+      });
+
+      result[i] = ray;
+    }
+
+    return mp_obj_new_tuple(rays, result);
   })
-
 
   MPY_BIND_LOCALS_DICT(algorithm,
     MPY_BIND_ROM_PTR_STATIC(clip_line),
