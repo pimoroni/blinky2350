@@ -1,0 +1,17 @@
+import math
+
+skull = image.load("/system/assets/skull.png")
+
+def magic_sprite(src, pos, scale=1, angle=0):
+  w, h = src.width, src.height
+  t = mat3().translate(*pos).scale(scale, scale).rotate(angle).translate(-w / 2, -h)
+  screen.pen = brush.image(src, t)
+  rect = shape.rectangle(0, 0, w, h)
+  rect.transform = t
+  screen.shape(rect)
+
+
+def update():
+  scale = ((math.sin(io.ticks / 1000) + 1.0) + 1) / 2
+  angle = math.cos(io.ticks / 500) * 45
+  magic_sprite(skull, (screen.width // 2, screen.height - 5), scale, angle)
