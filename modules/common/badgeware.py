@@ -85,7 +85,7 @@ def pen_glyph_renderer(image, parameters, cursor, measure):
     image.pen = color.rgb(*(int(c) for c in parameters))
 
 
-def text_tokenise(image, text, glyph_renderers=None):
+def text_tokenise(image, text, glyph_renderers=None, size=24):
     WORD = 1
     SPACE = 2
     LINE_BREAK = 3
@@ -119,13 +119,22 @@ def text_tokenise(image, text, glyph_renderers=None):
 
             i += 1
 
-            # search for the next space
-            end = line.find(" ", start)
-            if end == -1: end = len(line)
+            # search for the next space or glyph
+            next_space = line.find(" ", start)
+            next_glyph = line.find("[", start + 1)
+
+            end = min(next_space, next_glyph)
+            if end == -1:
+                end = max(next_space, next_glyph)
+            if end == -1:
+                end = len(line)
 
             # measure the text up to the space
             if end > start:
-                width, _ = image.measure_text(line[start:end])
+                if isinstance(image.font, font):
+                    width, _ = image.measure_text(line[start:end], size)
+                else:
+                    width, _ = image.measure_text(line[start:end])
                 tokens.append((WORD, width, line[start:end]))
 
             start = end
@@ -138,7 +147,7 @@ def text_tokenise(image, text, glyph_renderers=None):
     return tokens
 
 
-def text_draw(image, text, bounds=None, line_spacing=1, word_spacing=1):
+def text_draw(image, text, bounds=None, line_spacing=1, word_spacing=1, size=24):
     WORD = 1
     SPACE = 2
     LINE_BREAK = 3
@@ -149,7 +158,7 @@ def text_draw(image, text, bounds=None, line_spacing=1, word_spacing=1):
         bounds = rect(int(bounds.x), int(bounds.y), int(bounds.w), int(bounds.h))
 
     if isinstance(text, str):
-        tokens = text_tokenise(image, text)
+        tokens = text_tokenise(image, text, size=size)
     else:
         tokens = text
 
@@ -159,21 +168,25 @@ def text_draw(image, text, bounds=None, line_spacing=1, word_spacing=1):
     c = vec2(bounds.x, bounds.y)
     b = rect()
     for token in tokens:
+        font_height = size if isinstance(image.font, font) else image.font.height
         if token[0] == WORD:
             if c.x + token[1] > bounds.x + bounds.w:
                 c.x = bounds.x
-                c.y += image.font.height * line_spacing
-            image.text(token[2], c.x, c.y)
+                c.y += font_height * line_spacing
+            if isinstance(image.font, font):
+                image.text(token[2], c.x, c.y, size)
+            else:
+                image.text(token[2], c.x, c.y)
             c.x += token[1]
         elif token[0] == SPACE:
-            c.x += (image.font.height / 3) * word_spacing
+            c.x += (font_height / 3) * word_spacing
         elif token[0] == LINE_BREAK:
             c.x = bounds.x
-            c.y += image.font.height * line_spacing
+            c.y += font_height * line_spacing
         else:
             if c.x + token[1] > bounds.x + bounds.w:
                 c.x = bounds.x
-                c.y += image.font.height * line_spacing
+                c.y += font_height * line_spacing
 
             token[0](image, token[2], c, False)
             c.x += token[1]
@@ -452,71 +465,67 @@ def get_exception(e):
     return s.read()
 
 
-# Draw an overlay box with a given message within it
-def message(title, msg, window=None):
-    error_window = window or screen.window(5, 5, screen.width - 10, screen.height - 10)
-    error_window.font = DEFAULT_FONT
+# Draw scrolling text into a given window
+def scroll_text(text, font=None, bg=None, fg=None, window=None, speed=25, continuous=False):
+    font = font or rom_font.sins
+    bg = bg or color.rgb(0, 0, 0)
+    fg = fg or color.rgb(128, 128, 128)
+    window = window or screen.window(0, 0, screen.width, screen.height)
+    window.font = rom_font.sins
 
-    # Draw a light grey background
-    background = shape.rounded_rectangle(
-        0, 0, error_window.width, error_window.height, 5, 5, 5, 5
-    )
-    heading = shape.rounded_rectangle(0, 0, error_window.width, 12, 5, 5, 0, 0)
-    error_window.pen = color.rgb(100, 100, 100, 240)
-    error_window.shape(background)
+    tw, th = window.measure_text(text)
 
-    error_window.pen = color.rgb(255, 100, 100, 240)
-    error_window.shape(heading)
+    scroll_distance = tw + (0 if continuous else window.width)
+    
+    t_start = None
+    
+    offset = vec2(0, (window.height - th) // 2)
+    
+    def update():
+        t_start = t_start or io.ticks
+        timedelta = io.ticks - t_start
+        timedelta /= 1000 / speed
+        timedelta %= scroll_distance
+        timedelta /= scroll_distance
 
-    error_window.pen = color.rgb(50, 100, 50)
-    tw = 35
-    error_window.shape(
-        shape.rounded_rectangle(
-            error_window.width - tw - 36, error_window.height - 12, tw, 12, 3, 3, 0, 0
-        )
-    )
+        if continuous:
+            offset.x = -scroll_distance * timedelta
+        else:
+            offset.x = window.width - (scroll_distance * timedelta)
 
-    error_window.pen = color.rgb(255, 200, 200)
-    error_window.text(
-        "Okay", error_window.width - tw + 5 - 36, error_window.height - 12
-    )
-    y = 0
-    error_window.text(title, 5, y)
-    y += 17
+        window.pen = bg
+        window.clear()
+        window.pen = fg
 
-    error_window.pen = color.rgb(200, 200, 200)
-    bounds = error_window.clip
-    bounds.y += 12
-    bounds.h -= 32
-    bounds.x += 5
-    bounds.w -= 10
-
-    text_draw(error_window, msg, bounds=bounds)
+        window.text(text, offset)
+        
+        if continuous:
+            window.text(text, offset + vec2(tw, 0))
+        
+    return update
 
 
 def fatal_error(title, error):
     if not isinstance(error, str):
         error = get_exception(error)
     print(f"- ERROR: {error}")
+    
+    screen.pen = BG
+    screen.clear()
 
-    if _current_mode == LORES:
-        contents = image(160, 120)
-        contents.blit(screen, vec2(0, 0))
-        mode(HIRES)
-        screen.blit(contents, rect(0, 0, 320, 240))
-        del contents
+    io.poll()
 
-    message(title, error)
+    update_text = scroll_text(f"{title}: {error}")
 
-    display.update(screen.width == 320)
     while True:
         io.poll()
+        update_text()
         if io.pressed:
             break
+        display.update()
+
     while io.pressed:
         io.poll()
-
-    machine.reset()
 
 
 def load_font(font_file):
@@ -572,10 +581,10 @@ for k, v in picovector.__dict__.items():
 
 ASSETS = "/system/assets"
 DEFAULT_FONT = rom_font.sins
-ERROR_FONT = rom_font.desert
+ERROR_FONT = rom_font.sins
 
 FG = color.rgb(255, 255, 255)
-BG = color.rgb(20, 40, 60)
+BG = color.rgb(0, 0, 0)
 
 VBAT_SENSE = machine.ADC(machine.Pin.board.VBAT_SENSE)
 VBUS_DETECT = machine.Pin.board.VBUS_DETECT
@@ -597,7 +606,7 @@ screen.pen = BG
 
 # Build in some badgeware helpers, so we don't have to "bw.lores" etc
 # note HIRES and LORES and mode are currently unused for Blinky
-for k in ("mode", "HIRES", "LORES", "SpriteSheet", "load_font", "rom_font", "text_tokenise", "text_draw", "clamp", "rnd", "frnd"):
+for k in ("mode", "HIRES", "LORES", "SpriteSheet", "load_font", "rom_font", "text_tokenise", "text_draw", "scroll_text", "clamp", "rnd", "frnd"):
     setattr(builtins, k, locals()[k])  # noqa: B010
 
 
