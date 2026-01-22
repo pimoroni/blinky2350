@@ -231,10 +231,10 @@ namespace pimoroni {
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
 
       // setup dma transfer for pixel data to the pio
-    //if(blinky == nullptr) {
+    if(blinky == nullptr) {
       dma_channel = dma_claim_unused_channel(true);
       dma_ctrl_channel = dma_claim_unused_channel(true);
-    //}
+    }
     dma_channel_config ctrl_config = dma_channel_get_default_config(dma_ctrl_channel);
     channel_config_set_transfer_data_size(&ctrl_config, DMA_SIZE_32);
     channel_config_set_read_increment(&ctrl_config, false);
