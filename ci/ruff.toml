@@ -22,6 +22,8 @@ builtins = [
     "rect",
     "shape",
     "screen",
+    "scroll_text",
+    "micropython"
 ]
 
 # Include:
