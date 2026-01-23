@@ -468,7 +468,6 @@ def get_exception(e):
 # Draw scrolling text into a given window or image
 def scroll_text(text, font_face=None, bg=None, fg=None, target=None, speed=25, continuous=False, font_size=None):
     font_face = font_face or rom_font.sins
-    bg = bg or color.rgb(0, 0, 0)
     fg = fg or color.rgb(128, 128, 128)
 
     is_vector_font = isinstance(font_face, font)
@@ -502,8 +501,9 @@ def scroll_text(text, font_face=None, bg=None, fg=None, target=None, speed=25, c
             offset.x = target.width - (scroll_distance * timedelta)
 
         target.font = font_face
-        target.pen = bg
-        target.clear()
+        if bg is not None:
+            target.pen = bg
+            target.clear()
         target.pen = fg
 
         # The "font_size" argument is ignored for vector text
@@ -593,8 +593,8 @@ ASSETS = "/system/assets"
 DEFAULT_FONT = rom_font.sins
 ERROR_FONT = rom_font.sins
 
-FG = color.rgb(255, 255, 255)
-BG = color.rgb(0, 0, 0)
+FG = color.white
+BG = color.black
 
 VBAT_SENSE = machine.ADC(machine.Pin.board.VBAT_SENSE)
 VBUS_DETECT = machine.Pin.board.VBUS_DETECT
