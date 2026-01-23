@@ -105,6 +105,8 @@ class Apps:
             set_brightness(0.2)
             return f"/system/apps/{app.path}"
 
+        return None
+
     def __len__(self):
         return len(self.apps)
 
