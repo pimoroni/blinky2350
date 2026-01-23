@@ -185,6 +185,7 @@ def update():
             score = 0
             snake = Snake()
             state = GameState.INTRO
+            game_renderer.scroll = None
         game_renderer.draw_gameover(score)
 
 

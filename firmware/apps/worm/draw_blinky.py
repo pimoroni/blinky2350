@@ -75,6 +75,8 @@ class renderer:
         self.X_CELLS = 35
         self.Y_CELLS = 22
         self.CELL_SIZE = 1
+        self.scroll = None
+        self.scroll_window = image(screen.width, 10)
 
     # Drawing the intro is easy, we're just placing text and images.
     def draw_intro(self, game_speed):
@@ -116,9 +118,11 @@ class renderer:
 
     # Drawing the game over screen is again just images and text like the intro screen.
     def draw_gameover(self, score):
+        if not self.scroll:
+            self.scroll = scroll_text(f"Score: {score}", font_face=rom_font.ark, target=self.scroll_window)
+
         bg = image.load("assets/gameover.png")
         screen.blit(bg, vec2(0, 0))
         screen.pen = color.rgb(143, 143, 143)
-        screen.font = rom_font.ark
-        w, h = screen.measure_text(str(score))
-        screen.text(str(score), vec2(18 - (w / 2), 13))
+        screen.blit(self.scroll_window, vec2(0, screen.height - 11))
+        self.scroll()
