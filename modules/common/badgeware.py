@@ -525,7 +525,7 @@ def fatal_error(title, error):
 
     io.poll()
 
-    update_text = scroll_text(f"{title}: {error}")
+    update_text = scroll_text(f"{title}: {error}", bg=color.black)
 
     while True:
         io.poll()
