@@ -8,6 +8,7 @@ os.chdir("/system/apps/menu")
 from badgeware import run, set_brightness
 from app import Apps
 
+
 set_brightness(0.2)
 screen.font = pixel_font.load("/system/assets/fonts/ark.ppf")
 

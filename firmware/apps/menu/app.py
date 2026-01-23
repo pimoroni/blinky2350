@@ -1,5 +1,6 @@
 import os
 from badgeware import is_dir, file_exists, set_brightness
+from easing import easeInOutCirc
 import math
 
 
@@ -76,20 +77,20 @@ class Apps:
 
         time_delta = io.ticks - self.change_time
 
-        if time_delta > 250:
+        if time_delta > 500:
             animation_done = True
 
-        time_delta = min(time_delta, 250)
-        time_delta = time_delta / 250
+        time_delta = min(time_delta, 500)
+        time_delta = time_delta / 500
 
         scale = 1
         if self.launching:
-            set_brightness(0.2 - time_delta / 2)
+            app.icon.alpha = int(255 * (1.0 - time_delta))
             scale += time_delta * 4
             time_delta = 1
 
         offset = vec2(screen.width, 0)
-        offset *= time_delta
+        offset *= easeInOutCirc(time_delta)
         offset *= self.direction
 
         prev_app.draw(offset)
