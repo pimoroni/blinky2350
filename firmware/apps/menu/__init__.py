@@ -17,7 +17,7 @@ apps = Apps("/system/apps")
 
 def update():
 
-    screen.pen = color.rgb(0, 0, 0)
+    screen.pen = color.black
     screen.clear()
 
     # process button inputs to switch between apps

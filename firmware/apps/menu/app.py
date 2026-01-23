@@ -1,6 +1,7 @@
 import os
-from badgeware import is_dir, file_exists
+from badgeware import is_dir, file_exists, set_brightness
 import math
+
 
 class App:
     def __init__(self, collection, name, path, icon):
@@ -83,6 +84,7 @@ class Apps:
 
         scale = 1
         if self.launching:
+            set_brightness(0.2 - time_delta / 2)
             scale += time_delta * 4
             time_delta = 1
 
@@ -99,6 +101,7 @@ class Apps:
         app.draw(offset, scale)
 
         if self.launching and animation_done:
+            set_brightness(0.2)
             return f"/system/apps/{app.path}"
 
     def __len__(self):
