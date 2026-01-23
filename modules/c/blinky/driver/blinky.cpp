@@ -120,6 +120,11 @@ namespace pimoroni {
         else {
           p[ 0] = 0b0000;    // row data low, clock low
         }
+
+        // rows outside the screen's height are vblank to avoid ghosting
+        if(row >= HEIGHT) {
+          p[0] = 0b1000;
+        }
         p[ 1] = WIDTH - 1;                  // row pixel count
 
         // set the number of bcd ticks for this frame
@@ -340,7 +345,7 @@ namespace pimoroni {
     // Max brightness is - in fact - 256 since it's applied with:
     // result = (channel * brightness) >> 8
     // eg: (255 * 256) >> 8 == 255
-    this->brightness = floor(value * 256.0f);
+    this->brightness = floorf(value * 256.0f);
   }
 
   float Blinky::get_brightness() {

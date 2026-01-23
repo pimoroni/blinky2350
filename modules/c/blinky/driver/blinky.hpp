@@ -21,8 +21,9 @@ namespace pimoroni {
     static const uint8_t ROW_DATA_CLOCK         = 21;
 
   private:
-    static const uint32_t ROW_COUNT = 26;
-    static const uint32_t COL_COUNT = 39;
+    static const uint32_t VBLANK_ROWS           = 5;
+    static const uint32_t ROW_COUNT = HEIGHT + VBLANK_ROWS;
+    static const uint32_t COL_COUNT = WIDTH;
     static const uint32_t BCD_FRAME_COUNT = 14;
     static const uint32_t BCD_FRAME_BYTES = 48;   // 2 + 39 + 4 + 3
     static const uint32_t ROW_BYTES = BCD_FRAME_COUNT * BCD_FRAME_BYTES;
@@ -33,7 +34,7 @@ namespace pimoroni {
     static uint bitstream_sm;
     static uint bitstream_sm_offset;
 
-    uint16_t brightness = 256;
+    uint16_t brightness = 128;
 
     // must be aligned for 32bit dma transfer
     alignas(4) uint8_t bitstream[BITSTREAM_LENGTH] = {0};
