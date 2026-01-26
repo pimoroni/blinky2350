@@ -4,7 +4,7 @@ from machine import Pin, Timer, ADC
 import time
 import powman
 import gc
-from badgeware import WIDTH, HEIGHT, color, pixel_font, screen, rtc, display, shape
+from badgeware import rtc, display, set_brightness
 
 """
 
@@ -25,8 +25,9 @@ E18 - PSRAM Test Failure
 
 """
 
-WHITE = color.rgb(100, 100, 100)
-BLACK = color.rgb(0, 0, 0)
+set_brightness(0.1)
+
+WIDTH, HEIGHT = screen.width, screen.height
 
 CL = [Pin(0, Pin.OUT), Pin(1, Pin.OUT),
       Pin(2, Pin.OUT), Pin(3, Pin.OUT)]
@@ -45,7 +46,7 @@ c = Pin.board.BUTTON_C
 home = Pin.board.BUTTON_HOME
 power = Pin.board.POWER_EN
 
-font_ignore = pixel_font.load("/system/assets/fonts/smart.ppf")
+font_ignore = rom_font.smart
 screen.font = font_ignore
 
 
@@ -103,9 +104,9 @@ class Tests:
             raise Exception("E17") from None
 
     def display_error(self, error):
-        screen.pen = BLACK
+        screen.pen = color.black
         screen.clear()
-        screen.pen = WHITE
+        screen.pen = color.white
         screen.text(str(error), 5, 3)
         display.update()
 
@@ -133,9 +134,9 @@ class Tests:
             raise Exception("E18")
 
     def clear(self):
-        screen.pen = BLACK
+        screen.pen = color.black
         screen.clear()
-        screen.pen = WHITE
+        screen.pen = color.white
 
     def test_display(self):
 
@@ -297,9 +298,9 @@ class Tests:
 
     def draw(self):
         # Clear screen and display title
-        screen.pen = BLACK
+        screen.pen = color.black
         screen.clear()
-        screen.pen = WHITE
+        screen.pen = color.white
 
         # Draw button presses
         for button in sorted(self.buttons):
