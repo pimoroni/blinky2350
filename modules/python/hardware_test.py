@@ -173,7 +173,7 @@ class Tests:
     def clear_flag(self):
         # Now the test has complete, we can remove the flag.
         try:
-            os.remove("state/hardware_test.txt")
+            os.remove("hardware_test.txt")
         except OSError:
             pass
 
