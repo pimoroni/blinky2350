@@ -15,6 +15,7 @@ screen.font = pixel_font.load("/system/assets/fonts/ark.ppf")
 # find installed apps and create apps
 apps = Apps("/system/apps")
 
+io.poll()
 
 def update():
 
