@@ -14,7 +14,6 @@ from badgeware import run, State, rtc
 import time
 import ntptime
 from daylightsaving import DaylightSavingPolicy, DaylightSaving
-from usermessage import user_message
 from machine import RTC
 import math
 import wifi
@@ -126,6 +125,21 @@ regions = {
     "australia": (1, 1, 10, 6, 2, 1, 4, 6, 3, 60),
     "nz": (1, 0, 9, 6, 2, 1, 4, 6, 3, 60)
 }
+
+
+def user_message(caption, line1):
+    # A simple message screen with a single line of text.
+
+    small_font = rom_font.winds
+
+    screen.pen = color.black
+    screen.clear()
+    screen.font = small_font
+    screen.pen = color.white
+    screen.text(caption, vec2(0, 1))
+
+    screen.font = small_font
+    screen.text(line1, vec2(0, 9))
 
 
 def center_point(text, img):
@@ -456,7 +470,7 @@ def update():
             user_message("Unable", "to get time.")
 
     elif clock_state == ClockState.ConnectWiFi:
-        user_message("Connecting", "to WiFi...")
+        user_message("Please", "Wait...")
         if wifi.connect():
             clock_state = ClockState.UpdateTime
 
