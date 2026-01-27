@@ -20,6 +20,8 @@ list(APPEND SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/brushes/image.cpp
   ${CMAKE_CURRENT_LIST_DIR}/filters/blur.cpp
   ${CMAKE_CURRENT_LIST_DIR}/filters/dither.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/filters/monochrome.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/filters/onebit.cpp
   ${CMAKE_CURRENT_LIST_DIR}/micropython/brush.cpp
   ${CMAKE_CURRENT_LIST_DIR}/micropython/color.cpp
   ${CMAKE_CURRENT_LIST_DIR}/micropython/font.cpp

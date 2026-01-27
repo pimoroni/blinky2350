@@ -144,17 +144,7 @@ extern "C" {
     dest[1] = MP_OBJ_SENTINEL;
   }
 
-  static void color_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    self(self_in, color_obj_t);
-
-    // if(self->c.a() == 255) {
-    //   mp_printf(print, "color(r=%d, g=%d, b=%d)", self->c.r(), self->c.g(), self->c.b());
-    // }else{
-    //   mp_printf(print, "color(r=%d, g=%d, b=%d, a=%d)", self->c.r(), self->c.g(), self->c.b(), self->c.a());
-    // }
-  }
-
-  rgb_color_t _color_black  = rgb_color_t(0x00, 0x00, 0x00, 0xff);
+  rgb_color_t _color_black  = rgb_color_t(0x14, 0x1e, 0x28, 0xff);
   rgb_color_t _color_grape  = rgb_color_t(0x44, 0x24, 0x34, 0xff);
   rgb_color_t _color_navy   = rgb_color_t(0x30, 0x34, 0x6d, 0xff);
   rgb_color_t _color_grey   = rgb_color_t(0x4e, 0x4a, 0x4e, 0xff);
@@ -169,7 +159,7 @@ extern "C" {
   rgb_color_t _color_latte  = rgb_color_t(0xd2, 0xaa, 0x99, 0xff);
   rgb_color_t _color_cyan   = rgb_color_t(0x6d, 0xc2, 0xca, 0xff);
   rgb_color_t _color_yellow = rgb_color_t(0xda, 0xd4, 0x5e, 0xff);
-  rgb_color_t _color_white  = rgb_color_t(0xff, 0xff, 0xff, 0xff);
+  rgb_color_t _color_white  = rgb_color_t(0xde, 0xee, 0xd6, 0xff);
   rgb_color_t _color_transparent  = rgb_color_t(0x00, 0x00, 0x00, 0x00);
 
   // default palette based on Dawnbringer 16
@@ -236,7 +226,6 @@ extern "C" {
       type_color,
       MP_QSTR_color,
       MP_TYPE_FLAG_NONE,
-      print, (const void *)color_print,
       attr, (const void *)attr,
       locals_dict, &color_locals_dict
   );
