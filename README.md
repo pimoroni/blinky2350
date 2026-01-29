@@ -3,6 +3,8 @@
 Blinky - rocking a stunning grid of densely packed, brilliant white, LEDs,
 Blinky delivers big bold bright graphics to cut across the conference floor, or light up your murky hackers den.
 
+Get you very own Blinky from [https://shop.pimoroni.com/products/blinky-2350](https://shop.pimoroni.com/products/blinky-2350)
+
 ![Blinky 2350 front](https://badgewa.re/static/images/blinky_web_front.png)
 
 - [Specs](#specs)
