@@ -626,6 +626,10 @@ screen.pen = BG
 for k in ("mode", "HIRES", "LORES", "SpriteSheet", "load_font", "rom_font", "text_tokenise", "text_draw", "scroll_text", "clamp", "rnd", "frnd"):
     setattr(builtins, k, locals()[k])  # noqa: B010
 
+# Hoist image anti-aliasing constants
+builtins.OFF = image.OFF
+builtins.X2 = image.X2
+builtins.X4 = image.X4
 
 # Finally, build in badgeware as "bw" for less frequently used things
 builtins.bw = sys.modules["badgeware"]
