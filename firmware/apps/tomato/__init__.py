@@ -13,7 +13,7 @@ sys.path.insert(0, APP_DIR)
 
 import time
 
-from badgeware import get_case_led, run, set_brightness, set_case_led
+from badgeware import run, set_brightness
 
 # Centre points for the display
 CX = screen.width // 2
@@ -129,14 +129,12 @@ class Tomato(object):
         self.time_elapsed = 0
 
     def case_lights_off(self):
-        for led in range(4):
-            set_case_led(led, 0)
+        badge.set_caselights(0)
 
     def toggle_case_lights(self):
         if badge.ticks - self.last_toggle > 250:
-            for led in range(4):
-                value = 1 - get_case_led(led)
-                set_case_led(led, value)
+            lights = [1.0 - light for light in badge.get_caselights()]
+            badge.set_caselights(*lights)
             self.last_toggle = badge.ticks
 
     def update(self):
