@@ -88,7 +88,7 @@ def init():
 def update():
     global state, show_menu, menu_value
 
-    if io.BUTTON_B in io.pressed:
+    if badge.pressed(BUTTON_B):
         show_menu = not show_menu
 
     if show_menu:
@@ -97,18 +97,18 @@ def update():
 
         # increase/decrease the value to add
         # short press is +/- 5ml and long is +/- 25ml
-        if io.BUTTON_A in io.pressed:
+        if badge.pressed(BUTTON_A):
             menu_value -= 50
-        if io.BUTTON_C in io.pressed:
+        if badge.pressed(BUTTON_C):
             menu_value += 50
 
-        if io.BUTTON_DOWN in io.pressed:
+        if badge.pressed(BUTTON_DOWN):
             state["current"] += menu_value
             menu_value = 0
             show_menu = not show_menu
             State.save("hydrate", state)
 
-        if io.BUTTON_UP in io.held:
+        if badge.held(BUTTON_UP):
             state["current"] = 0
             State.save("hydrate", state)
 

@@ -10,7 +10,7 @@ os.chdir(APP_DIR)
 # Standalone bootstrap for module imports
 sys.path.insert(0, APP_DIR)
 
-from badgeware import run, State, rtc
+from badgeware import State
 import time
 import ntptime
 from daylightsaving import DaylightSavingPolicy, DaylightSaving
@@ -20,9 +20,7 @@ import wifi
 import secrets
 from fallingsand import FallingSand
 
-# enable the RTC interrupts.
-# Timers run without this but they won't be able to wake the board.
-rtc.enable_timer_interrupt(True)
+# Enable a 1s timer
 rtc.set_timer(1)
 
 SCREEN_MAIN_W = screen.width - 4
@@ -191,8 +189,7 @@ def display_time():
         # Here we're seeing if the timer's gone off from one second ago,
         # and if it has we're checking if we need to drop any grains and
         # resetting the RTC timer for one second's time.
-        if rtc.read_timer_flag():
-            rtc.clear_timer_flag()
+        if rtc.timer_elapsed():
             falling_sand.assess_drop(currenttime)
             rtc.set_timer(1)
         falling_sand.drop_grains()
@@ -434,20 +431,20 @@ def update():
     wifi.tick()
 
     # First we check if anything's been pressed before choosing what to display.
-    if io.BUTTON_C in io.pressed:
+    if badge.pressed(BUTTON_C):
         state["clock_style"] += 1
         if state["clock_style"] > 4:
             state["clock_style"] = 1
         write_settings()
 
-    if io.BUTTON_A in io.pressed:
+    if badge.pressed(BUTTON_A):
         state["clock_style"] -= 1
         if state["clock_style"] < 1:
             state["clock_style"] = 4
         write_settings()
 
     # If the year in the RTC is 2021 or earlier, we need to sync so it has the same effect as pressing B.
-    if io.BUTTON_B in io.pressed or time.gmtime()[0] <= 2021 and clock_state == ClockState.Running:
+    if badge.pressed(BUTTON_B) or time.gmtime()[0] <= 2021 and clock_state == ClockState.Running:
         user_message("updating", "time")
         clock_state = ClockState.ConnectWiFi
 

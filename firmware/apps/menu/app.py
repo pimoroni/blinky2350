@@ -1,5 +1,5 @@
 import os
-from badgeware import is_dir, file_exists, set_brightness
+from badgeware import set_brightness
 from easing import easeInOutCirc
 import math
 
@@ -57,17 +57,17 @@ class Apps:
     def prev(self):
         self.last_active = self.active_index
         self.active_index = (self.active_index - 1) % len(self)
-        self.change_time = io.ticks
+        self.change_time = badge.ticks
         self.direction = -1
 
     def next(self):
         self.last_active = self.active_index
         self.active_index = (self.active_index + 1) % len(self)
-        self.change_time = io.ticks
+        self.change_time = badge.ticks
         self.direction = 1
 
     def launch(self):
-        self.change_time = io.ticks
+        self.change_time = badge.ticks
         self.launching = True
 
     def draw(self):
@@ -75,7 +75,7 @@ class Apps:
         prev_app = self.apps[self.last_active]
         animation_done = False
 
-        time_delta = io.ticks - self.change_time
+        time_delta = badge.ticks - self.change_time
 
         if time_delta > 500:
             animation_done = True
@@ -97,7 +97,7 @@ class Apps:
 
         offset.x += -screen.width * self.direction
         if animation_done:
-            offset.y += math.sin(io.ticks / 150) * 2
+            offset.y += math.sin(badge.ticks / 150) * 2
 
         app.draw(offset, scale)
 

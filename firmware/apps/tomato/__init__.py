@@ -37,7 +37,7 @@ def center_text(text, y):
         screen.text(text, screen.width / 2 - (w / 2), y)
     else:
         if not scroll:
-            scroll = scroll_text(text, font_face=rom_font.winds, target=scroll_window, bg=color.black)
+            scroll = text.scroll(text, font_face=rom_font.winds, target=scroll_window, bg=color.black)
         else:
             scroll()
             screen.blit(scroll_window, vec2(0, CY - 1))
@@ -133,11 +133,11 @@ class Tomato(object):
             set_case_led(led, 0)
 
     def toggle_case_lights(self):
-        if io.ticks - self.last_toggle > 250:
+        if badge.ticks - self.last_toggle > 250:
             for led in range(4):
                 value = 1 - get_case_led(led)
                 set_case_led(led, value)
-            self.last_toggle = io.ticks
+            self.last_toggle = badge.ticks
 
     def update(self):
 
@@ -185,7 +185,7 @@ def on_exit():
 def update():
     global timer, scroll
 
-    if io.BUTTON_B in io.pressed:
+    if badge.pressed(BUTTON_B):
         scroll = None
         timer.run()
     timer.draw()

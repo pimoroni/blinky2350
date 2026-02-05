@@ -5,7 +5,7 @@ sys.path.insert(0, "/system/apps/menu")
 sys.path.insert(0, "/")
 os.chdir("/system/apps/menu")
 
-from badgeware import run, set_brightness, is_charging, get_battery_level
+from badgeware import run, set_brightness
 from app import Apps
 import math
 
@@ -16,7 +16,7 @@ screen.font = pixel_font.load("/system/assets/fonts/ark.ppf")
 # find installed apps and create apps
 apps = Apps("/system/apps")
 
-io.poll()
+badge.poll()
 
 
 def draw_battery(level):
@@ -44,23 +44,23 @@ def update():
     screen.clear()
 
     # process button inputs to switch between apps
-    if io.BUTTON_C in io.pressed:
+    if badge.pressed(BUTTON_C):
         apps.next()
         print(apps.active.name)
-    if io.BUTTON_A in io.pressed:
+    if badge.pressed(BUTTON_A):
         apps.prev()
         print(apps.active.name)
 
-    if io.BUTTON_B in io.pressed:
+    if badge.pressed(BUTTON_B):
         apps.launch()
 
-    if io.BUTTON_HOME in io.pressed:
-        show_battery_level = io.ticks
+    if badge.pressed(BUTTON_HOME):
+        show_battery_level = badge.ticks
 
-    if is_charging():
-        draw_battery((io.ticks / 20) % 100)
-    elif get_battery_level() <=35:
-        if int(math.sin(io.ticks / 250) + 1):
+    if badge.is_charging():
+        draw_battery((badge.ticks / 20) % 100)
+    elif badge.battery_level() <=35:
+        if int(math.sin(badge.ticks / 250) + 1):
             draw_battery(0)
 
     # draw menu apps

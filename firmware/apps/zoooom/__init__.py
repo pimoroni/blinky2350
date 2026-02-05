@@ -404,7 +404,7 @@ def update():
 
         screen.blit(title, vec2(0, 0))
 
-        if io.pressed:
+        if badge.pressed():
             game_state = GameState.PLAYING
 
     # If we're playing, advance time each tick and capture inputs.
@@ -413,18 +413,18 @@ def update():
         # This check disables controls while fading in.
         if check_start():
 
-            if io.BUTTON_A in io.held and player.x > 20:
+            if badge.held(BUTTON_A) and player.x > 20:
                 player.x_accel -= 2
-            elif io.BUTTON_C in io.held and player.x < screen_buffer.width - 20:
+            elif badge.held(BUTTON_C) and player.x < screen_buffer.width - 20:
                 player.x_accel += 2
-            if io.BUTTON_DOWN in io.held and player.y < screen_buffer.height - 20:
+            if badge.held(BUTTON_DOWN) and player.y < screen_buffer.height - 20:
                 player.y_accel += 2
-            if io.BUTTON_UP in io.held and player.y > 20:
+            if badge.held(BUTTON_UP) and player.y > 20:
                 player.y_accel -= 2
-            if io.BUTTON_B in io.pressed:
+            if badge.pressed(BUTTON_B):
                 z_increment *= 2
                 player.boost = True
-            if io.BUTTON_B in io.released:
+            if badge.released(BUTTON_B):
                 z_increment /= 2
                 player.boost = False
 
@@ -477,7 +477,7 @@ def update():
     # If we're on game over, just randomly pick one of the five images with static to display, display it and loop until the user presses any button.
     elif game_state == GameState.GAME_OVER:
         if not scroll:
-            scroll = scroll_text(f"Score: {level_segments_passed}", font_face=rom_font.ark, target=scroll_window, bg=color.black)
+            scroll = text.scroll(f"Score: {level_segments_passed}", font_face=rom_font.ark, target=scroll_window, bg=color.black)
 
         screen.clear()
         screen.blit(game_over, vec2(0, 0))
@@ -485,7 +485,7 @@ def update():
         screen.blit(scroll_window, vec2(0, screen.height - 11))
         scroll()
 
-        if io.pressed:
+        if badge.pressed():
             init_game()
             game_state = GameState.INTRO
             scroll = None

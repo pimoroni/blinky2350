@@ -4,11 +4,11 @@ import math
 def update():
   screen.antialias = image.X4
 
-  i = math.sin(io.ticks / 2000) * 0.2 + 0.5
-  f = math.sin(io.ticks / 1000) * 150
-  t = f + (math.sin(io.ticks / 500) + 1.0) * 50 + 100
+  i = math.sin(badge.ticks / 2000) * 0.2 + 0.5
+  f = math.sin(badge.ticks / 1000) * 150
+  t = f + (math.sin(badge.ticks / 500) + 1.0) * 50 + 100
 
-  stroke = ((math.sin(io.ticks / 1000) + 1) * 0.05) + 0.1
+  stroke = ((math.sin(badge.ticks / 1000) + 1) * 0.05) + 0.1
 
   shapes = [
     shape.rectangle(-1, -1, 2, 2),
@@ -31,18 +31,18 @@ def update():
 
   shape_count = len(shapes)
 
-  a = (io.ticks / 2000) % 1
+  a = (badge.ticks / 2000) % 1
 
   alpha_a = math.sin(a * math.pi / 2) * 255
   alpha_b = 255 - alpha_a
 
-  offset = int((io.ticks / 2000) % shape_count)
+  offset = int((badge.ticks / 2000) % shape_count)
 
   last_shape = shapes[(offset - 1) % len(shapes)]
   current_shape = shapes[offset]
 
-  scale = ((math.sin(io.ticks / 2000 * math.pi) + 1) * 4) + 6
-  transform = mat3().translate(screen.width / 2, screen.height / 2).rotate(io.ticks / 100).scale(scale)
+  scale = ((math.sin(badge.ticks / 2000 * math.pi) + 1) * 4) + 6
+  transform = mat3().translate(screen.width / 2, screen.height / 2).rotate(badge.ticks / 100).scale(scale)
 
   screen.pen = color.rgb(255, 255, 255, alpha_b * 0.5)
   last_shape.transform = transform

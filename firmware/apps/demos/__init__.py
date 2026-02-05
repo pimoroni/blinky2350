@@ -8,7 +8,7 @@ os.chdir(APP_DIR)
 
 from badgeware import run
 
-mode(LORES)
+badge.mode(LORES)
 
 
 import gc
@@ -46,10 +46,10 @@ load_demo(0)
 def update():
   global selected, menu_index
 
-  if io.BUTTON_DOWN in io.pressed:
+  if badge.pressed(BUTTON_DOWN):
     load_demo(selected + 1)
 
-  if io.BUTTON_UP in io.pressed:
+  if badge.pressed(BUTTON_UP):
     load_demo(selected - 1)
 
   # make sure a font is loaded by default in case the example wishes to use it

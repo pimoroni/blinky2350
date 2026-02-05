@@ -119,7 +119,7 @@ class renderer:
     # Drawing the game over screen is again just images and text like the intro screen.
     def draw_gameover(self, score):
         if not self.scroll:
-            self.scroll = scroll_text(f"Score: {score}", font_face=rom_font.ark, target=self.scroll_window, bg=color.black)
+            self.scroll = text.scroll(f"Score: {score}", font_face=rom_font.ark, target=self.scroll_window, bg=color.black)
 
         bg = image.load("assets/gameover.png")
         screen.blit(bg, vec2(0, 0))
