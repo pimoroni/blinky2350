@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, "/system/apps/hydrate")
 os.chdir("/system/apps/hydrate")
 
-from badgeware import run, State, clamp, set_brightness
+from badgeware import State, set_brightness
 
 CX = screen.width / 2
 CY = screen.height / 2
