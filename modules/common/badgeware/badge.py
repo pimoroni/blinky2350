@@ -206,7 +206,7 @@ class Badge():
         return [light.duty_u16() / 65535 for light in self._case_lights]
 
     def sleep(self, duration=None):
-        powman.sleep() if duration is None else powman.sleep(duration)
+        powman.goto_dormant_for(duration) if duration else powman.sleep()
 
     def wake_reason(self):
         pass
