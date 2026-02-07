@@ -25,6 +25,8 @@ include(pimoroni_i2c/micropython)
 include(modules/c/blinky/micropython)
 include(modules/c/picovector/micropython)
 
+target_compile_definitions(usermod_picovector INTERFACE BLINKY=1 PICO=1)
+
 # Sensors & Breakouts
 include(micropython-common-breakouts)
 
