@@ -1,4 +1,4 @@
-from badgeware import run, set_case_led
+from badgeware import run
 import rp2
 
 import binascii
@@ -75,8 +75,7 @@ def update():
     # set transfer state here
     disk_mode.transferring = rp2.is_msc_busy()
 
-    for led in range(4):
-        set_case_led(led, int(disk_mode.transferring))
+    badge.set_caselights(int(disk_mode.transferring))
 
     # draw the ui
     disk_mode.draw()
