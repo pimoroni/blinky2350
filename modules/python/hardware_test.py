@@ -194,7 +194,7 @@ class Tests:
 
             # Skip to the screen test if button is held (Used in rework only)
             badge.poll()
-            if badge.held(BUTTON_DOWN):
+            if badge.held(BUTTON_UP):
                 while True:
                     self.cl_timer.deinit()
                     self.test_display()
