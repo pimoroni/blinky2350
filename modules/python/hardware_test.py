@@ -1,6 +1,6 @@
 import os
 import network
-from machine import Pin, Timer, ADC
+from machine import Pin, Timer, ADC, I2C
 import time
 import powman
 import gc
@@ -48,6 +48,8 @@ power = Pin.board.POWER_EN
 
 font_ignore = rom_font.smart
 screen.font = font_ignore
+
+rtc = rtc.pcf85063a.PCF85063A(I2C())
 
 
 class Tests:
@@ -189,6 +191,13 @@ class Tests:
     def run(self):
 
         try:
+
+            # Skip to the screen test if button is held (Used in rework only)
+            badge.poll()
+            if badge.held(BUTTON_DOWN):
+                while True:
+                    self.cl_timer.deinit()
+                    self.test_display()
 
             self.test_charge_stat()
 
