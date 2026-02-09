@@ -27,17 +27,17 @@ scroll = None
 scroll_window = image(screen.width, 10)
 
 
-def center_text(text, y):
+def center_text(t, y):
     global scroll
 
-    w, _ = screen.measure_text(text)
+    w, _ = screen.measure_text(t)
 
     # if the text is too long to be centered on the display, we'll start scrolling text
     if w <= screen.width:
-        screen.text(text, screen.width / 2 - (w / 2), y)
+        screen.text(t, screen.width / 2 - (w / 2), y)
     else:
         if not scroll:
-            scroll = text.scroll(text, font_face=rom_font.winds, target=scroll_window, bg=color.black)
+            scroll = text.scroll(t, font_face=rom_font.winds, target=scroll_window, bg=color.black)
         else:
             scroll()
             screen.blit(scroll_window, vec2(0, CY - 1))
