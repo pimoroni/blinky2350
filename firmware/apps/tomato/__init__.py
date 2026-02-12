@@ -24,7 +24,6 @@ large_font = pixel_font.load("/system/assets/fonts/smart.ppf")
 screen.font = small_font
 
 scroll = None
-scroll_window = image(screen.width, 10)
 
 
 def center_text(t, y):
@@ -34,13 +33,12 @@ def center_text(t, y):
 
     # if the text is too long to be centered on the display, we'll start scrolling text
     if w <= screen.width:
-        screen.text(t, screen.width / 2 - (w / 2), y)
+        screen.text(t, (screen.width - w) / 2, y)
     else:
         if not scroll:
-            scroll = text.scroll(t, font_face=rom_font.winds, target=scroll_window, bg=color.black)
-        else:
-            scroll()
-            screen.blit(scroll_window, vec2(0, CY - 1))
+            scroll = text.scroll(t, font_face=rom_font.winds, align=y)
+        scroll()
+
 
 class Tomato(object):
     def __init__(self):

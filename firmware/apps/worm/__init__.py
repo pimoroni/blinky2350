@@ -179,14 +179,13 @@ def update():
 
     # If we're on the game over screen, reset the game state and go back into the intro when the button is pressed.
     elif state == GameState.GAME_OVER:
-        if badge.pressed:
+        if game_renderer.draw_gameover(score) and badge.pressed():
             game_speed = 1
             grid_size = 1
             score = 0
             snake = Snake()
             state = GameState.INTRO
             game_renderer.scroll = None
-        game_renderer.draw_gameover(score)
 
 
 if __name__ == "__main__":

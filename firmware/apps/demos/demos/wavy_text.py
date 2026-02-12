@@ -6,8 +6,11 @@ update_text = None
 def update():
     global update_text
 
-    update_text = update_text or text.scroll(" Hello World ", target=canvas, bg=color.black, continuous=True, speed=screen.width)
+    update_text = update_text or text.scroll("Hello World", target=canvas, gap=10, speed=screen.width)
 
+    canvas.pen = color.black
+    canvas.clear()
+    canvas.pen = color.white
     update_text()
 
     for x in range(screen.width):

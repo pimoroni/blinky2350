@@ -55,14 +55,12 @@ def fatal_error(title, error):
         error = get_exception(error)
     print(f"- ERROR: {error}")
 
-    screen.pen = color.black
-    screen.clear()
-
-    badge.poll()
-
-    update_text = text.scroll(f"{title}: {error}", bg=color.black)
+    update_text = text.scroll(f"{title}: {error}")
 
     while True:
+        screen.pen = color.black
+        screen.clear()
+        screen.pen = color.white
         badge.poll()
         update_text()
         if badge.pressed():
