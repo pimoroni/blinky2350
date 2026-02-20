@@ -2,7 +2,6 @@ import sys
 import os
 import math
 import random
-from badgeware import run
 from draw_blinky import renderer
 
 sys.path.insert(0, "/system/apps/worm")
@@ -188,5 +187,4 @@ def update():
             game_renderer.scroll = None
 
 
-if __name__ == "__main__":
-    run(update)
+run(update)

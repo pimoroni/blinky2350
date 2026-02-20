@@ -6,8 +6,6 @@ APP_DIR = "/system/apps/demos"
 sys.path.insert(0, APP_DIR)
 os.chdir(APP_DIR)
 
-from badgeware import run
-
 badge.mode(LORES)
 
 
@@ -88,5 +86,4 @@ def update():
       screen.text(name, 5, y)
 
 
-if __name__ == "__main__":
-  run(update)
+run(update)

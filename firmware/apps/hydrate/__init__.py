@@ -125,5 +125,5 @@ def on_exit():
     pass
 
 
-if __name__ == "__main__":
-    run(update, init=init, on_exit=on_exit)
+init()
+run(update)

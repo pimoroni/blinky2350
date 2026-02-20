@@ -59,5 +59,4 @@ def on_exit():
     State.save("badge", state)
 
 
-if __name__ == "__main__":
-    run(update=update, on_exit=on_exit)
+run(update)

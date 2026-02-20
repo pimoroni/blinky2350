@@ -472,5 +472,4 @@ def update():
             clock_state = ClockState.UpdateTime
 
 
-if __name__ == "__main__":
-    run(update)
+run(update)
