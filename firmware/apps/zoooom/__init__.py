@@ -2,7 +2,6 @@ import sys
 import os
 import math
 import random
-from badgeware import run
 
 sys.path.insert(0, "/system/apps/zoooom")
 os.chdir("/system/apps/zoooom")
@@ -489,5 +488,4 @@ def update():
             scroll = None
 
 
-if __name__ == "__main__":
-    run(update)
+run(update)

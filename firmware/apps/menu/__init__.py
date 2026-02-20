@@ -5,7 +5,7 @@ sys.path.insert(0, "/system/apps/menu")
 sys.path.insert(0, "/")
 os.chdir("/system/apps/menu")
 
-from badgeware import run, set_brightness
+from badgeware import set_brightness
 from app import Apps
 import math
 
@@ -67,5 +67,4 @@ def update():
     return apps.draw()
 
 
-if __name__ == "__main__":
-    run(update)
+on_exit = run(update).result

@@ -13,7 +13,7 @@ sys.path.insert(0, APP_DIR)
 
 import time
 
-from badgeware import run, set_brightness
+from badgeware import set_brightness
 
 # Centre points for the display
 CX = screen.width // 2
@@ -188,6 +188,5 @@ def update():
     timer.update()
 
 
-# Standalone support for Thonny debugging
-if __name__ == "__main__":
-    run(update, init=init, on_exit=on_exit)
+init()
+run(update)
