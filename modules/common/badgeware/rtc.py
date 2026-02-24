@@ -5,6 +5,7 @@ import pcf85063a
 import datetime
 import gc
 import builtins
+import board
 
 
 class RTC:
@@ -71,6 +72,9 @@ class RTC:
         self._rtc.clear_alarm_flag()
         self._rtc.clear_timer_flag()
         self._rtc.unset_alarm()
+
+    def alarm_status(self):
+        return board.RTC_ALARM.value() == 0
 
 
 builtins.rtc = RTC()
