@@ -2593,28 +2593,28 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int iPitch)
         {
             if (pJPEG->ucPixelType == RGB888_LITTLE_ENDIAN)
             {
-                for (iCol=0; iCol<6; iCol+=3)
+                for (iCol=0; iCol<2; iCol++)
                 {
                     // top left block
                     Y1 =  pY[iCol] << 12; // scale to level of conversion table
                     Cb  = pCb[0];
                     Cr  = pCr[0];
-                    JPEGPixelLE888(pOutput8 + iCol, Y1, Cb, Cr);
+                    JPEGPixelLE888(pOutput8 + iCol*3, Y1, Cb, Cr);
                     // top right block
                     Y1 =  pY[iCol+(DCTSIZE*2)] << 12; // scale to level of conversion table
                     Cb = pCb[1];
                     Cr = pCr[1];
-                    JPEGPixelLE888(pOutput8 + 6+iCol, Y1, Cb, Cr);
+                    JPEGPixelLE888(pOutput8 + 6+iCol*3, Y1, Cb, Cr);
                     // bottom left block
                     Y1 =  pY[iCol+DCTSIZE*4] << 12;  // scale to level of conversion table
                     Cb = pCb[2];
                     Cr = pCr[2];
-                    JPEGPixelLE888(pOutput8+iPitch*2 + iCol, Y1, Cb, Cr);
+                    JPEGPixelLE888(pOutput8+iPitch*2 + iCol*3, Y1, Cb, Cr);
                     // bottom right block
                     Y1 =  pY[iCol+DCTSIZE*6] << 12; // scale to level of conversion table
                     Cb  = pCb[3];
                     Cr  = pCr[3];
-                    JPEGPixelLE888(pOutput8+iPitch*2 + 6+iCol, Y1, Cb, Cr);
+                    JPEGPixelLE888(pOutput8+iPitch*2 + 6+iCol*3, Y1, Cb, Cr);
                 } // for each column
             }
             else if (pJPEG->ucPixelType == RGB565_LITTLE_ENDIAN)
@@ -2934,7 +2934,7 @@ static void JPEGPutMCU12(JPEGIMAGE *pJPEG, int x, int iPitch)
     
     if (pJPEG->iOptions & JPEG_SCALE_HALF)
     {
-        for (iRow=0; iRow<4; iRow++)
+        for (iRow=0; iRow<8; iRow++)
         {
             for (iCol=0; iCol<4; iCol++)
             {
@@ -2947,22 +2947,15 @@ static void JPEGPutMCU12(JPEGIMAGE *pJPEG, int x, int iPitch)
                     JPEGPixelLE(pOutput+iCol, Y1, Cb, Cr);
                 else
                     JPEGPixelBE(pOutput+iCol, Y1, Cb, Cr);
-                Y1 = (pY[DCTSIZE*2] + pY[DCTSIZE*2+1] + pY[DCTSIZE*2+8] + pY[DCTSIZE*2+9]) << 10;
-                Cb = (pCb[32] + pCb[33] + 1) >> 1;
-                Cr = (pCr[32] + pCr[33] + 1) >> 1;
-                if (pJPEG->ucPixelType == RGB888_LITTLE_ENDIAN)
-                    JPEGPixelLE888(pOutput8+iCol*3+iPitch, Y1, Cb, Cr);
-                else if (pJPEG->ucPixelType == RGB565_LITTLE_ENDIAN)
-                    JPEGPixelLE(pOutput+iCol+iPitch, Y1, Cb, Cr);
-                else
-                    JPEGPixelBE(pOutput+iCol+iPitch, Y1, Cb, Cr);
                 pCb += 2;
                 pCr += 2;
                 pY += 2;
             }
             pY += 8;
-            pOutput += iPitch*2;
-            pOutput8 += iPitch*2;
+            if (iRow == 3) // skip to next Y MCU block
+               pY += 64;            
+            pOutput += iPitch;
+            pOutput8 += iPitch;
         }
         return;
     }
@@ -3386,8 +3379,6 @@ static int DecodeJPEG(JPEGIMAGE *pJPEG)
     cDCTable2 = pJPEG->JPCI[2].dc_tbl_no;
     cACTable2 = pJPEG->JPCI[2].ac_tbl_no;
     iDCPred0 = iDCPred1 = iDCPred2 = mcuCX = mcuCY = 0;
-
-    printf("SubSample mode: 0x%x\n", pJPEG->ucSubSample);
     
     switch (pJPEG->ucSubSample) // set up the parameters for the different subsampling options
     {
