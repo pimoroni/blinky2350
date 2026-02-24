@@ -1,7 +1,7 @@
 add_library(usermod_picovector INTERFACE)
 
-include(modules/c/pngdec/pngdec)
-include(modules/c/jpegdec/jpegdec)
+find_package(PNGDEC CONFIG REQUIRED)
+find_package(JPEGDEC CONFIG REQUIRED)
 
 list(APPEND SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/micropython/picovector_bindings.c
