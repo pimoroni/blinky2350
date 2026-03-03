@@ -445,29 +445,29 @@ def update():
 
         screen.blit(title, vec2(0, 0))
 
-        if badge.pressed():
+        if controls["ANY_KEY"]:
             game_state = GameState.PLAYING
 
     # If we're playing, advance time each tick and capture inputs.
     elif game_state == GameState.PLAYING:
 
+        z_increment = default_z_increment
+        player.boost = False
+
         # This check disables controls while fading in.
         if check_start():
 
-            if badge.held(BUTTON_A) and player.x > 20:
+            if controls["MOVE_LEFT"] and player.x > 20:
                 player.x_accel -= 2
-            elif badge.held(BUTTON_C) and player.x < screen_buffer.width - 20:
+            elif controls["MOVE_RIGHT"] and player.x < screen_buffer.width - 20:
                 player.x_accel += 2
-            if badge.held(BUTTON_DOWN) and player.y < screen_buffer.height - 20:
+            if controls["MOVE_DOWN"] and player.y < screen_buffer.height - 20:
                 player.y_accel += 2
-            if badge.held(BUTTON_UP) and player.y > 20:
+            if controls["MOVE_UP"] and player.y > 20:
                 player.y_accel -= 2
-            if badge.pressed(BUTTON_B):
-                z_increment *= 2
+            if controls["BOOST"]:
+                z_increment = 2 * default_z_increment
                 player.boost = True
-            if badge.released(BUTTON_B):
-                z_increment /= 2
-                player.boost = False
 
         # Refresh the pkayer, draw the main screen and advance time.
         player.refresh()
@@ -525,7 +525,7 @@ def update():
         screen.pen = color.rgb(143, 143, 143)
         scroll()
 
-        if badge.pressed():
+        if controls["ANY_KEY"]:
             init_game()
             game_state = GameState.INTRO
             scroll = None

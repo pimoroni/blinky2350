@@ -194,6 +194,7 @@ def parse_controls():
 # The main loop switches behaviour depending on game state.
 def update():
     global timer, state, snake, score, game_speed, grid_size
+    
     parse_controls()
 
     # If we're in the intro, check for the button presses
