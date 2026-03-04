@@ -3,6 +3,7 @@ import os
 import math
 import random
 from draw_blinky import renderer
+import qwstpad
 
 sys.path.insert(0, "/system/apps/worm")
 os.chdir("/system/apps/worm")
@@ -30,6 +31,8 @@ state = GameState.INTRO
 game_speed = 1
 score = 0
 timer = badge.ticks
+gamepad = None
+controls={}
 
 
 # The Snake class stores the location and direction of the head,
@@ -86,14 +89,14 @@ newdirection = 0
 def intro_controls():
     global game_speed, state
 
-    if badge.pressed(BUTTON_A):
+    if controls["MOVE_LEFT"]:
         if game_speed > 1:
             game_speed -= 1
 
-    elif badge.pressed(BUTTON_B):
+    elif controls["CONTINUE"]:
         state = GameState.PLAYING
 
-    elif badge.pressed(BUTTON_C):
+    elif controls["MOVE_RIGHT"]:
         if game_speed < 5:
             game_speed += 1
 
@@ -102,13 +105,13 @@ def intro_controls():
 def game_controls():
     global newdirection
 
-    if badge.pressed(BUTTON_C) and snake.direction != 3:
+    if controls["MOVE_RIGHT"] and snake.direction != 3:
         newdirection = 1
-    elif badge.pressed(BUTTON_A) and snake.direction != 1:
+    elif controls["MOVE_LEFT"] and snake.direction != 1:
         newdirection = 3
-    elif badge.pressed(BUTTON_UP) and snake.direction != 2:
+    elif controls["MOVE_UP"] and snake.direction != 2:
         newdirection = 0
-    elif badge.pressed(BUTTON_DOWN) and snake.direction != 0:
+    elif controls["MOVE_DOWN"] and snake.direction != 0:
         newdirection = 2
 
 
@@ -152,9 +155,47 @@ def move_snake():
         state = GameState.GAME_OVER
 
 
+def init_gamepad():
+    global gamepad
+    gamepads = qwstpad.Gamepadhelper()
+    for i in gamepads.pads:
+        if i is not None:
+            gamepad = i
+            return i
+    return None
+
+
+def parse_controls():
+    global controls, gamepad
+
+    if not gamepad:
+        gamepad = init_gamepad()
+
+    if gamepad:
+        try:
+            gamepad.update_buttons()
+        except OSError:
+            gamepad = init_gamepad()
+
+    if gamepad:
+        controls["MOVE_LEFT"] = badge.pressed(BUTTON_A) or gamepad.pressed("L")
+        controls["MOVE_RIGHT"] = badge.pressed(BUTTON_C) or gamepad.pressed("R")
+        controls["MOVE_DOWN"] = badge.pressed(BUTTON_DOWN) or gamepad.pressed("D")
+        controls["MOVE_UP"] = badge.pressed(BUTTON_UP) or gamepad.pressed("U")
+        controls["CONTINUE"] = badge.pressed(BUTTON_B) or gamepad.pressed("B")
+    else:
+        controls["MOVE_LEFT"] = badge.pressed(BUTTON_A)
+        controls["MOVE_RIGHT"] = badge.pressed(BUTTON_C)
+        controls["MOVE_DOWN"] = badge.pressed(BUTTON_DOWN)
+        controls["MOVE_UP"] = badge.pressed(BUTTON_UP)
+        controls["CONTINUE"] = badge.pressed(BUTTON_B)
+
+
 # The main loop switches behaviour depending on game state.
 def update():
     global timer, state, snake, score, game_speed, grid_size
+
+    parse_controls()
 
     # If we're in the intro, check for the button presses
     # to change settings and start the game, then draw the intro screen.
@@ -178,7 +219,7 @@ def update():
 
     # If we're on the game over screen, reset the game state and go back into the intro when the button is pressed.
     elif state == GameState.GAME_OVER:
-        if game_renderer.draw_gameover(score) and badge.pressed():
+        if game_renderer.draw_gameover(score) and controls["CONTINUE"]:
             game_speed = 1
             grid_size = 1
             score = 0
