@@ -24,6 +24,7 @@ class BT:
         self.badgecodes = {}
         self._seen = []
         self._timeout = None
+        self._transmit_queue = []
 
         self._ble = bluetooth.BLE()
         self._ble.irq(self._irq)
@@ -32,6 +33,10 @@ class BT:
         self.address = binascii.hexlify(self._ble.config("mac")[1]).decode("ASCII")
 
     def send(self, command, data, destination=None, duration=30_000, interval=None):
+        if self._timeout is not None:
+            self._transmit_queue.append((command, data, destination, duration, interval))
+            return
+
         destination_mac = destination or BROADCAST_ADDR
         interval = interval or 0.5
         command = int(command, 16) if isinstance(command, str) else command
@@ -41,12 +46,17 @@ class BT:
             if self._timeout:
                 self._timeout.deinit()
             self._timeout = Timer()
-            self._timeout.init(mode=Timer.ONE_SHOT, period=duration, callback=self.stop, hard=False)
+            self._timeout.init(mode=Timer.ONE_SHOT, period=duration, callback=self._transmit_done, hard=False)
+
+    def _transmit_done(self, _timer):
+        self.stop()
+        if self._transmit_queue:
+            self.send(*self._transmit_queue.pop(0))
 
     def broadcast(self, data, lifetime=10, duration=30_000, interval=None):
         self.send(COMMAND_MESHCAST | (lifetime & 0xff), data, BROADCAST_ADDR, duration, interval)
 
-    def stop(self, _timer=None):
+    def stop(self):
         if self._timeout:
             self._timeout.deinit()
             self._timeout = None
