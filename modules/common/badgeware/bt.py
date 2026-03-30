@@ -12,7 +12,10 @@ _IRQ_SCAN_DONE = const(6)
 DURATION_MS = 0
 INTERVAL_US = int(.2 * 1000 * 1000)
 WINDOW_US   = int(.2 * 1000 * 1000)
+
 BROADCAST_ADDR = "28cdc1ffffff"
+COMMAND_BADGECODE = 0xc0de
+COMMAND_MESHCAST = 0xff00  # Anything starting 0xff__ should be rebroadcast
 
 
 class BT:
@@ -40,7 +43,10 @@ class BT:
             self._timeout = Timer()
             self._timeout.init(mode=Timer.ONE_SHOT, period=duration, callback=self.stop, hard=False)
 
-    def stop(self):
+    def broadcast(self, data, lifetime=10, duration=30_000, interval=None):
+        self.send(COMMAND_MESHCAST | (lifetime & 0xff), data, BROADCAST_ADDR, duration, interval)
+
+    def stop(self, _timer=None):
         if self._timeout:
             self._timeout.deinit()
             self._timeout = None
@@ -64,13 +70,21 @@ class BT:
             src_mac = binascii.hexlify(src_mac).decode("ASCII")
 
             if len(adv_data) == 31:
-                crc = binascii.crc32(adv_data)
                 dst_mac, command, message = struct.unpack(">x6sH22s", bytes(adv_data))
                 dst_mac = binascii.hexlify(dst_mac).decode("ASCII")
                 if dst_mac in (BROADCAST_ADDR, self.address):
                     if command == 0xc0de:
                         self.badgecodes[src_mac] = message[:6].decode("ASCII")
+                    elif (command & COMMAND_MESHCAST) == COMMAND_MESHCAST:
+                        lifetime = command & 0xff
+                        crc = binascii.crc32(message)
+                        if lifetime > 0 and crc not in self._seen:
+                            lifetime -= 1
+                            self.broadcast(message, lifetime)
+                            self.messages.append((src_mac, dst_mac == BROADCAST_ADDR, f"{command & COMMAND_MESHCAST:02x}", message, crc))
+                            self._seen.append(crc)
                     else:
+                        crc = binascii.crc32(adv_data)
                         if crc not in self._seen:
                             self.messages.append((src_mac, dst_mac == BROADCAST_ADDR, f"{command:02x}", message, crc))
                             self._seen.append(crc)
