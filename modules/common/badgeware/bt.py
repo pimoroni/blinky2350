@@ -38,7 +38,7 @@ class BT:
             if self._timeout:
                 self._timeout.deinit()
             self._timeout = Timer()
-            self._timeout.init(mode=Timer.ONE_SHOT, period=duration, callback=self.stop)
+            self._timeout.init(mode=Timer.ONE_SHOT, period=duration, callback=self.stop, hard=False)
 
     def stop(self):
         if self._timeout:
@@ -83,8 +83,12 @@ class BT:
         except ValueError:
             return False  # cannot unsee
 
-    def icon(self, pos, addr):
-        seed = int(addr, 16)
+    def icon(self, pos, addr, size=8):
+        icon = image(8, 8)
+        icon.pen = color.rgb(0, 0, 0)
+        icon.clear()
+        icon.pen = color.rgb(255, 255, 255)
+        seed = int(addr, 16) if isinstance(addr, str) else addr
         random.seed(seed)
         if seed & 2:
             _ = random.getrandbits(32)
@@ -93,21 +97,20 @@ class BT:
         b = (bits >> 16) & 0xff
         c = (bits >> 8) & 0xff
         d = (bits >> 0) & 0xff
-        o_x = pos.x + 1
-        o_y = pos.y
         for y in range(8):
             if a & (0b1 << y):
-                screen.put(o_x + 0, o_y + y)
-                screen.put(o_x + 7 - 0, o_y + y)
+                icon.put(0, y)
+                icon.put(7 - 0, y)
             if b & (0b1 << y):
-                screen.put(o_x + 1, o_y + y)
-                screen.put(o_x + 7 - 1, o_y + y)
+                icon.put(1, y)
+                icon.put(7 - 1, y)
             if c & (0b1 << y):
-                screen.put(o_x + 2, o_y + y)
-                screen.put(o_x + 7 - 2, o_y + y)
+                icon.put(2, y)
+                icon.put(7 - 2, y)
             if d & (0b1 << y):
-                screen.put(o_x + 3, o_y + y)
-                screen.put(o_x + 7 - 3, o_y + y)
+                icon.put(3, y)
+                icon.put(7 - 3, y)
+        screen.blit(icon, icon.clip, rect(pos.x, pos.y, size, size))
 
 
 builtins.bt = BT()
