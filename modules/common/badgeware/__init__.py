@@ -169,6 +169,7 @@ __import__(".frozen/badgeware/sprite")
 __import__(".frozen/badgeware/filesystem")
 __import__(".frozen/badgeware/memory")
 __import__(".frozen/badgeware/rtc")
+__import__(".frozen/badgeware/bt")
 State = __import__(".frozen/badgeware/state").State
 
 DEFAULT_FONT = rom_font.sins
