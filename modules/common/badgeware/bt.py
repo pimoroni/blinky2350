@@ -53,8 +53,14 @@ class BT:
         if self._transmit_queue:
             self.send(*self._transmit_queue.pop(0))
 
-    def broadcast(self, data, lifetime=10, duration=30_000, interval=None):
-        self.send(COMMAND_MESHCAST | (lifetime & 0xff), data, BROADCAST_ADDR, duration, interval)
+    def _see(self, crc):
+        if crc not in self._seen:
+            self._seen.append(crc)
+
+    def broadcast(self, message, lifetime=10, duration=30_000, interval=None):
+        # Make sure we track our own broadcasts as "seen" so we can filter them out
+        self._see(binascii.crc32(message))
+        self.send(COMMAND_MESHCAST | (lifetime & 0xff), message, BROADCAST_ADDR, duration, interval)
 
     def stop(self):
         if self._timeout:
@@ -92,12 +98,12 @@ class BT:
                             lifetime -= 1
                             self.broadcast(message, lifetime)
                             self.messages.append((src_mac, dst_mac == BROADCAST_ADDR, f"{command & COMMAND_MESHCAST:02x}", message, crc))
-                            self._seen.append(crc)
+                            self._see(crc)
                     else:
                         crc = binascii.crc32(adv_data)
                         if crc not in self._seen:
                             self.messages.append((src_mac, dst_mac == BROADCAST_ADDR, f"{command:02x}", message, crc))
-                            self._seen.append(crc)
+                            self._see(crc)
 
     def unsee(self, message):
         crc = message[4] if isinstance(message, tuple) else message
