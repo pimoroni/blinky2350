@@ -13,27 +13,26 @@ list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}/micropython")
 # All regular modules
 list(APPEND CMAKE_MODULE_PATH "${PIMORONI_PICO_PATH}/micropython/modules")
-# Local modules in modules/
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/..")
 
-set(PNGDEC_DIR "${CMAKE_CURRENT_LIST_DIR}/../modules/c/pngdec")
-set(JPEGDEC_DIR "${CMAKE_CURRENT_LIST_DIR}/../modules/c/jpegdec")
+# Allows us to find downstream /modules/c/*/
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/..")
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 
+# PicoVector and supporting libs
+find_package(PICOVECTOR CONFIG REQUIRED)
+
+# Build picovector for Blinky 2350
+target_compile_definitions(usermod_picovector INTERFACE BLINKY=1)
+
 # Essential
 include(pimoroni_i2c/micropython)
 
+# blinky display driver
 include(modules/c/blinky/micropython)
-include(modules/c/picovector/micropython)
 
-# Build picovector for Pico
-target_compile_definitions(usermod_picovector INTERFACE BLINKY=1 PICO=1)
-
-# Build jpegdec for Pico
-target_compile_definitions(jpegdec PRIVATE PICO_BUILD)
-
+# QR Code Module
 include(qrcode/micropython/micropython)
 
 # Sensors & Breakouts
