@@ -26,6 +26,9 @@ find_package(PICOVECTOR CONFIG REQUIRED)
 # Build picovector for Blinky 2350
 target_compile_definitions(usermod_picovector INTERFACE BLINKY=1)
 
+# Badgeware input module
+include(modules/c/input/micropython)
+
 # Essential
 include(pimoroni_i2c/micropython)
 
