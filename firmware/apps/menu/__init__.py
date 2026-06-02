@@ -8,6 +8,7 @@ os.chdir("/system/apps/menu")
 from badgeware import set_brightness
 from app import Apps
 import math
+import qwstpad
 
 
 set_brightness(0.2)
@@ -17,6 +18,42 @@ screen.font = pixel_font.load("/system/assets/fonts/ark.ppf")
 apps = Apps("/system/apps")
 
 badge.poll()
+gamepad = None
+controls = {}
+
+
+def init_gamepad():
+    global gamepad
+    gamepads = qwstpad.Gamepadhelper()
+    for i in gamepads.pads:
+        if i is not None:
+            gamepad = i
+            return i
+    return None
+
+
+def parse_controls():
+    global controls, gamepad
+
+    if not gamepad:
+        gamepad = init_gamepad()
+
+    if gamepad:
+        try:
+            gamepad.update_buttons()
+        except OSError:
+            gamepad = init_gamepad()
+
+    if gamepad:
+        controls["LEFT"] = badge.pressed(BUTTON_A) or gamepad.pressed("L")
+        controls["RIGHT"] = badge.pressed(BUTTON_C) or gamepad.pressed("R")
+        controls["SELECT"] = badge.pressed(BUTTON_B) or gamepad.pressed("B")
+        controls["BATTERY"] = badge.pressed(BUTTON_HOME) or gamepad.pressed("+")
+    else:
+        controls["LEFT"] = badge.pressed(BUTTON_A)
+        controls["RIGHT"] = badge.pressed(BUTTON_C)
+        controls["SELECT"] = badge.pressed(BUTTON_B)
+        controls["BATTERY"] = badge.pressed(BUTTON_HOME)
 
 
 def draw_battery(level):
@@ -40,21 +77,23 @@ def draw_battery(level):
 def update():
     global show_battery_level
 
+    parse_controls()
+
     screen.pen = color.black
     screen.clear()
 
     # process button inputs to switch between apps
-    if badge.pressed(BUTTON_C):
+    if controls["RIGHT"]:
         apps.next()
         print(apps.active.name)
-    if badge.pressed(BUTTON_A):
+    if controls["LEFT"]:
         apps.prev()
         print(apps.active.name)
 
-    if badge.pressed(BUTTON_B):
+    if controls["SELECT"]:
         apps.launch()
 
-    if badge.pressed(BUTTON_HOME):
+    if controls["BATTERY"]:
         show_battery_level = badge.ticks
 
     if badge.is_charging():
