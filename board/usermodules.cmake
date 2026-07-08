@@ -20,8 +20,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/..")
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 
-# PicoVector and supporting libs
-find_package(PICOVECTOR CONFIG REQUIRED)
+# PicoVector & MicroPython bindings
+# Rasterise/blur on core1 (PV_DUAL_CORE is off by default in picovector-micropython).
+set(PV_DUAL_CORE ON)
+find_package(PICOVECTOR_MICROPYTHON CONFIG REQUIRED)
 
 # Build picovector for Blinky 2350
 target_compile_definitions(usermod_picovector INTERFACE BLINKY=1)
