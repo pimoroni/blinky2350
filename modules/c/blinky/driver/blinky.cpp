@@ -239,6 +239,12 @@ namespace pimoroni {
     // join fifos as only tx needed (gives 8 deep fifo instead of 4)
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
 
+    // Pin the PIO to a fixed clock so the matrix scan-out timing (bit clock, BCD
+    // PWM, row blanking) is independent of clk_sys. Without a divider the refresh
+    // runs at the full system clock, so any change to the system clock rescales
+    // the display timing; 150MHz is the rate the panel was designed and validated at.
+    sm_config_set_clkdiv(&c, (float)clock_get_hz(clk_sys) / 150000000.0f);
+
       // setup dma transfer for pixel data to the pio
     if(blinky == nullptr) {
       dma_channel = dma_claim_unused_channel(true);
