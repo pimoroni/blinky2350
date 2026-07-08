@@ -44,6 +44,10 @@ static uint32_t dma_ctrl_channel;
 namespace pimoroni {
   uint32_t __attribute__((section(".uninitialized_data"))) __attribute__ ((aligned (4))) framebuffer[Blinky::WIDTH * Blinky::HEIGHT];
 
+  // DMA source, kept in SRAM (.bss), zero-initialised, 32-bit aligned. See blinky.hpp.
+  alignas(4) uint8_t Blinky::bitstream[Blinky::BITSTREAM_LENGTH];
+  uint32_t Blinky::bitstream_addr = (uint32_t)Blinky::bitstream;
+
   Blinky* Blinky::blinky = nullptr;
   PIO Blinky::bitstream_pio = pio0;
   uint Blinky::bitstream_sm = 0;

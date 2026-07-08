@@ -36,9 +36,13 @@ namespace pimoroni {
 
     uint16_t brightness = 128;
 
-    // must be aligned for 32bit dma transfer
-    alignas(4) uint8_t bitstream[BITSTREAM_LENGTH] = {0};
-    const uint32_t bitstream_addr = (uint32_t)bitstream;
+    // DMA source for the LED-matrix refresh. It is streamed continuously by DMA,
+    // so it MUST live in SRAM: if it lands in PSRAM (e.g. via the GC heap) the
+    // constant refresh reads contend with USB/XIP on the QSPI bus and throttle
+    // the whole system. Static (not a per-object member) so it stays out of the
+    // GC heap, and 32-bit aligned for DMA.
+    alignas(4) static uint8_t bitstream[BITSTREAM_LENGTH];
+    static uint32_t bitstream_addr;
     static Blinky* blinky;
     static void dma_complete();
 
