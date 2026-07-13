@@ -428,8 +428,6 @@ def update():
 
     global state, clock_state
 
-    wifi.tick()
-
     # First we check if anything's been pressed before choosing what to display.
     if badge.pressed(BUTTON_C):
         state["clock_style"] += 1
