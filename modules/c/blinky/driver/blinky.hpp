@@ -22,29 +22,36 @@ namespace pimoroni {
 
   private:
     static const uint32_t VBLANK_ROWS           = 5;
-    static const uint32_t ROW_COUNT = HEIGHT + VBLANK_ROWS;
-    static const uint32_t COL_COUNT = WIDTH;
-    static const uint32_t BCD_FRAME_COUNT = 14;
-    static const uint32_t BCD_FRAME_BYTES = 48;   // 2 + 39 + 4 + 3
-    static const uint32_t ROW_BYTES = BCD_FRAME_COUNT * BCD_FRAME_BYTES;
-    static const uint32_t BITSTREAM_LENGTH = (ROW_COUNT * ROW_BYTES);
+    static const uint32_t ROW_COUNT = HEIGHT + VBLANK_ROWS;   // 31 scanned rows
+    static const uint32_t BCD_FRAME_COUNT = 14;               // 14-bit BCD PWM
+    // One bit-plane is WIDTH column bits padded up to a 2-word (64-bit) boundary
+    // so the data state machine keeps planes word-aligned as it streams them.
+    static const uint32_t PLANE_WORDS = 2;
+    static const uint32_t PLANES_LENGTH = BCD_FRAME_COUNT * ROW_COUNT * PLANE_WORDS;
 
   private:
-    static PIO bitstream_pio;
-    static uint bitstream_sm;
-    static uint bitstream_sm_offset;
+    static PIO pio;
+    static uint data_sm;
+    static uint ctrl_sm;
+    static uint data_offset;
+    static uint ctrl_offset;
 
     uint16_t brightness = 128;
 
-    // DMA source for the LED-matrix refresh. It is streamed continuously by DMA,
-    // so it MUST live in SRAM: if it lands in PSRAM (e.g. via the GC heap) the
-    // constant refresh reads contend with USB/XIP on the QSPI bus and throttle
-    // the whole system. Static (not a per-object member) so it stays out of the
-    // GC heap, and 32-bit aligned for DMA.
-    alignas(4) static uint8_t bitstream[BITSTREAM_LENGTH];
-    static uint32_t bitstream_addr;
+    // DMA sources for the LED-matrix refresh. They are streamed continuously by
+    // DMA, so they MUST live in SRAM: if they land in PSRAM (e.g. via the GC
+    // heap) the constant refresh reads contend with USB/XIP on the QSPI bus and
+    // throttle the whole system. Static (not per-object members) so they stay
+    // out of the GC heap, and 32-bit aligned for DMA.
+    //
+    // Packed pixel planes, phase-major order [frame][row], streamed to the data
+    // state machine.
+    alignas(4) static uint32_t planes[PLANES_LENGTH];
+    static uint32_t planes_addr;
+    // BCD tick counts (2^frame), streamed one per phase to the ctrl SM.
+    alignas(4) static uint32_t bcd_ticks[BCD_FRAME_COUNT];
+    static uint32_t bcd_ticks_addr;
     static Blinky* blinky;
-    static void dma_complete();
 
 
   public:
@@ -67,7 +74,6 @@ namespace pimoroni {
 
   private:
     void partial_teardown();
-    void dma_safe_abort(uint channel);
   };
 
 }

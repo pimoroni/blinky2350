@@ -11,68 +11,61 @@
 
 #include "blinky.hpp"
 
-// pixel data is stored as a stream of bits delivered in the
-// order the PIO needs to manage the shift registers, row
-// selects, delays, and latching/blanking
+// Two PIO state machines refresh the panel with no CPU intervention between
+// scanlines (see blinky.pio). The data SM shifts packed pixel planes into the
+// column shift registers; the ctrl SM latches each plane, walks the row select,
+// and times the BCD display period. Each SM is fed by its own DMA stream so no
+// timing/pin control has to be duplicated into the pixel data.
 //
-// the pins used are:
-//
-//  - 13: column clock (sideset)
-//  - 14: column data  (out base)
-//  - 15: column latch
-//  - 16: column blank
-//  - 17: row select bit 0
-//  - 18: row select bit 1
-//  - 19: row select bit 2
-//  - 20: row select bit 3
-//
-// the framebuffer data is structured like this:
-//
-// for each row:
-//   for each bcd frame:
-//            0: 00111111                           // row pixel count (minus one)
-//            1: xxxxrrrr                           // row select bits
-//      2  - 27: xxxxxxxv, xxxxxxxv, xxxxxxxv, ...  // pixel data
-//      66 - 67: xxxxxxxx, xxxxxxxx,                // dummy bytes to dword align
-//      68 - 71: tttttttt, tttttttt, tttttttt       // bcd tick count (0-65536)
-//
-//  .. and back to the start
+// The pixel planes are packed one bit per column, WIDTH bits per plane padded to
+// a 2-word boundary, in phase-major order: [frame][row][PLANE_WORDS].
 
-static uint32_t dma_channel;
-static uint32_t dma_ctrl_channel;
+static uint dma_pix;
+static uint dma_pix_reload;
+static uint dma_tick;
+static uint dma_tick_reload;
 
 namespace pimoroni {
   uint32_t __attribute__((section(".uninitialized_data"))) __attribute__ ((aligned (4))) framebuffer[Blinky::WIDTH * Blinky::HEIGHT];
 
-  // DMA source, kept in SRAM (.bss), zero-initialised, 32-bit aligned. See blinky.hpp.
-  alignas(4) uint8_t Blinky::bitstream[Blinky::BITSTREAM_LENGTH];
-  uint32_t Blinky::bitstream_addr = (uint32_t)Blinky::bitstream;
+  // DMA sources, kept in SRAM (.bss), zero-initialised, 32-bit aligned. See blinky.hpp.
+  alignas(4) uint32_t Blinky::planes[Blinky::PLANES_LENGTH];
+  uint32_t Blinky::planes_addr = (uint32_t)Blinky::planes;
+  alignas(4) uint32_t Blinky::bcd_ticks[Blinky::BCD_FRAME_COUNT];
+  uint32_t Blinky::bcd_ticks_addr = (uint32_t)Blinky::bcd_ticks;
 
   Blinky* Blinky::blinky = nullptr;
-  PIO Blinky::bitstream_pio = pio0;
-  uint Blinky::bitstream_sm = 0;
-  uint Blinky::bitstream_sm_offset = 0;
+  PIO Blinky::pio = pio0;
+  uint Blinky::data_sm = 0;
+  uint Blinky::ctrl_sm = 0;
+  uint Blinky::data_offset = 0;
+  uint Blinky::ctrl_offset = 0;
 
   Blinky::~Blinky() {
     if(blinky == this) {
       partial_teardown();
 
-      dma_channel_unclaim(dma_ctrl_channel); // This works now the teardown behaves correctly
-      dma_channel_unclaim(dma_channel); // This works now the teardown behaves correctly
-      pio_sm_unclaim(bitstream_pio, bitstream_sm);
-      pio_remove_program(bitstream_pio, &blinky_program, bitstream_sm_offset);
+      dma_channel_unclaim(dma_pix_reload);
+      dma_channel_unclaim(dma_pix);
+      dma_channel_unclaim(dma_tick_reload);
+      dma_channel_unclaim(dma_tick);
+      pio_sm_unclaim(pio, data_sm);
+      pio_sm_unclaim(pio, ctrl_sm);
+      pio_remove_program(pio, &blinky_data_program, data_offset);
+      pio_remove_program(pio, &blinky_ctrl_program, ctrl_offset);
 
       blinky = nullptr;
     }
   }
 
   void Blinky::partial_teardown() {
-    // Stop the bitstream SM
-    pio_sm_set_enabled(bitstream_pio, bitstream_sm, false);
+    // Stop both state machines
+    pio_sm_set_enabled(pio, data_sm, false);
+    pio_sm_set_enabled(pio, ctrl_sm, false);
 
     // Make sure the display is off by turning off the column drivers
     const uint pins_to_set = 1 << COLUMN_BLANK;
-    pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
+    pio_sm_set_pins_with_mask(pio, ctrl_sm, pins_to_set, pins_to_set);
 
     // Clock out data to turn off the row drivers
     gpio_put(ROW_DATA, false);
@@ -83,61 +76,34 @@ namespace pimoroni {
       gpio_put(ROW_DATA_CLOCK, false);
     }
 
-    dma_hw->ch[dma_ctrl_channel].al1_ctrl = (dma_hw->ch[dma_ctrl_channel].al1_ctrl & ~DMA_CH0_CTRL_TRIG_CHAIN_TO_BITS) | (dma_ctrl_channel << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB);
-    dma_hw->ch[dma_channel].al1_ctrl = (dma_hw->ch[dma_channel].al1_ctrl & ~DMA_CH0_CTRL_TRIG_CHAIN_TO_BITS) | (dma_channel << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB);
-    // Abort any in-progress DMA transfer
-    dma_safe_abort(dma_ctrl_channel);
-    //dma_channel_abort(dma_ctrl_channel);
-    //dma_channel_abort(dma_channel);
-    dma_safe_abort(dma_channel);
+    // Break each channel's chain (point it at itself) so aborting can't restart it
+    const uint channels[] = {dma_pix, dma_pix_reload, dma_tick, dma_tick_reload};
+    for(uint ch : channels) {
+      dma_hw->ch[ch].al1_ctrl = (dma_hw->ch[ch].al1_ctrl & ~DMA_CH0_CTRL_TRIG_CHAIN_TO_BITS) | (ch << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB);
+    }
+    // Abort any in-progress DMA transfers. dma_channel_abort polls the BUSY bit
+    // to fence off in-flight transfers; no DMA completion IRQs are enabled here.
+    dma_channel_abort(dma_pix_reload);
+    dma_channel_abort(dma_pix);
+    dma_channel_abort(dma_tick_reload);
+    dma_channel_abort(dma_tick);
   }
 
   void Blinky::init() {
 
     if(blinky != nullptr) {
-      // Tear down the old GU instance's hardware resources
+      // Tear down the old instance's hardware resources
       partial_teardown();
     }
-                
-    // for each row:
-    //   for each bcd frame:
-    //            0: 00001111                                     // row data & clock
-    //            1: 00011111                                     // row pixel count (minus one)
-    //      2  - 40: xxxxxxxv, xxxxxxxv, xxxxxxxv, ...            // pixel data)
-    //      41 - 43: xxxxxxxx, xxxxxxxx, xxxxxxxx                 // dummy bytes to dword align
-    //      44 - 47: tttttttt, tttttttt, tttttttt, tttttttt       // bcd tick count (0-65536)
-    //
-    //  .. and back to the start
 
-    // initialise the bcd timing values and row selects in the bitstream
-    for(uint8_t row = 0; row < ROW_COUNT; row++) {
-      for(uint8_t frame = 0; frame < BCD_FRAME_COUNT; frame++) {
-        // find the offset of this row and frame in the bitstream
-        uint8_t *p = &bitstream[(row * ROW_BYTES) + (BCD_FRAME_BYTES * frame)];
-
-        if(frame == 0) {
-          if(row == 0)
-            p[ 0] = 0b1101;  // row data high, toggle clock low, then high
-          else
-            p[ 0] = 0b1000;  // row data low, toggle clock low, then high
-        }
-        else {
-          p[ 0] = 0b0000;    // row data low, clock low
-        }
-
-        // rows outside the screen's height are vblank to avoid ghosting
-        if(row >= HEIGHT) {
-          p[0] = 0b1000;
-        }
-        p[ 1] = WIDTH - 1;                  // row pixel count
-
-        // set the number of bcd ticks for this frame
-        uint32_t bcd_ticks = (1 << frame);
-        p[44] = (bcd_ticks &       0xff) >>  0;
-        p[45] = (bcd_ticks &     0xff00) >>  8;
-        p[46] = (bcd_ticks &   0xff0000) >> 16;
-        p[47] = (bcd_ticks & 0xff000000) >> 24;
-      }
+    // BCD tick counts: plane p is lit for 2^p ticks (binary-weighted PWM).
+    for(uint8_t frame = 0; frame < BCD_FRAME_COUNT; frame++) {
+      bcd_ticks[frame] = 1u << frame;
+    }
+    // Start every plane clear. Vblank rows (y >= HEIGHT) are never written by
+    // set_pixel, so they stay dark and de-ghost the scan.
+    for(uint32_t i = 0; i < PLANES_LENGTH; i++) {
+      planes[i] = 0;
     }
 
     gpio_init(COLUMN_CLOCK); gpio_set_dir(COLUMN_CLOCK, GPIO_OUT); gpio_put(COLUMN_CLOCK, false);
@@ -148,7 +114,6 @@ namespace pimoroni {
     // initialise the row select, and set them to a non-visible row to avoid flashes during setup
     gpio_init(ROW_DATA); gpio_set_dir(ROW_DATA, GPIO_OUT); gpio_put(ROW_DATA, false);
     gpio_init(ROW_DATA_CLOCK); gpio_set_dir(ROW_DATA_CLOCK, GPIO_OUT); gpio_put(ROW_DATA_CLOCK, true);
-    //gpio_init(ROW_REG_CLOCK); gpio_set_dir(ROW_REG_CLOCK, GPIO_OUT); gpio_put(ROW_REG_CLOCK, true);
 
     sleep_ms(100);
 
@@ -206,86 +171,101 @@ namespace pimoroni {
     gpio_put(COLUMN_BLANK, true);
 
     // setup the pio if it has not previously been set up
-    bitstream_pio = pio0;
+    pio = pio0;
     if(blinky == nullptr) {
-      bitstream_sm = pio_claim_unused_sm(bitstream_pio, true);
-      bitstream_sm_offset = pio_add_program(bitstream_pio, &blinky_program);
+      data_sm = pio_claim_unused_sm(pio, true);
+      ctrl_sm = pio_claim_unused_sm(pio, true);
+      data_offset = pio_add_program(pio, &blinky_data_program);
+      ctrl_offset = pio_add_program(pio, &blinky_ctrl_program);
     }
 
-    pio_gpio_init(bitstream_pio, COLUMN_CLOCK);
-    pio_gpio_init(bitstream_pio, COLUMN_DATA);
-    pio_gpio_init(bitstream_pio, COLUMN_LATCH);
-    pio_gpio_init(bitstream_pio, COLUMN_BLANK);
+    pio_gpio_init(pio, COLUMN_CLOCK);
+    pio_gpio_init(pio, COLUMN_DATA);
+    pio_gpio_init(pio, COLUMN_LATCH);
+    pio_gpio_init(pio, COLUMN_BLANK);
+    pio_gpio_init(pio, ROW_DATA);
+    pio_gpio_init(pio, ROW_DATA_CLOCK);
 
-    pio_gpio_init(bitstream_pio, ROW_DATA);
-    pio_gpio_init(bitstream_pio, ROW_DATA_CLOCK);
-
-    // set the blank and row pins to be high, then set all led driving pins as outputs.
-    // This order is important to avoid a momentary flash
+    // Hold the column blank high before enabling outputs to avoid a momentary flash
     const uint pins_to_set = 1 << COLUMN_BLANK;
-    pio_sm_set_pins_with_mask(bitstream_pio, bitstream_sm, pins_to_set, pins_to_set);
-    pio_sm_set_consecutive_pindirs(bitstream_pio, bitstream_sm, COLUMN_CLOCK, 6, true);
+    pio_sm_set_pins_with_mask(pio, ctrl_sm, pins_to_set, pins_to_set);
 
-    pio_sm_config c = blinky_program_get_default_config(bitstream_sm_offset);
+    // pin directions: the data SM drives the column clock and data; the ctrl SM
+    // drives the column latch/blank and the row data/clock
+    pio_sm_set_consecutive_pindirs(pio, data_sm, COLUMN_CLOCK, 2, true);   // 16, 17
+    pio_sm_set_consecutive_pindirs(pio, ctrl_sm, COLUMN_LATCH, 4, true);   // 18, 19, 20, 21
 
-    // osr shifts right, autopull on, autopull threshold 8
-    sm_config_set_out_shift(&c, true, true, 32);
+    // Pin both SMs to a fixed 150MHz so the scan-out timing (bit clock, BCD PWM,
+    // row blanking) is independent of clk_sys. 150MHz is the rate the panel was
+    // designed and validated at.
+    float div = (float)clock_get_hz(clk_sys) / 150000000.0f;
 
-    // configure out, set, and sideset pins
-    sm_config_set_out_pins(&c, ROW_DATA, 2);
-    sm_config_set_set_pins(&c, COLUMN_DATA, 3);
-    sm_config_set_sideset_pins(&c, COLUMN_CLOCK);
+    // data SM: shifts column data out, clocked by sideset column clock
+    pio_sm_config dc = blinky_data_program_get_default_config(data_offset);
+    sm_config_set_sideset_pins(&dc, COLUMN_CLOCK);
+    sm_config_set_out_pins(&dc, COLUMN_DATA, 1);
+    sm_config_set_out_shift(&dc, true, true, 32);       // shift right, autopull, threshold 32
+    sm_config_set_fifo_join(&dc, PIO_FIFO_JOIN_TX);
+    sm_config_set_clkdiv(&dc, div);
+    pio_sm_init(pio, data_sm, data_offset, &dc);
 
-    // join fifos as only tx needed (gives 8 deep fifo instead of 4)
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+    // Preload Y with the per-plane column count (WIDTH - 1); set's 5-bit
+    // immediate can't reach it, so the data SM copies Y to X each plane.
+    pio_sm_put_blocking(pio, data_sm, WIDTH - 1);
+    pio_sm_exec(pio, data_sm, pio_encode_pull(false, true));
+    pio_sm_exec(pio, data_sm, pio_encode_out(pio_y, 32));
 
-    // Pin the PIO to a fixed clock so the matrix scan-out timing (bit clock, BCD
-    // PWM, row blanking) is independent of clk_sys. Without a divider the refresh
-    // runs at the full system clock, so any change to the system clock rescales
-    // the display timing; 150MHz is the rate the panel was designed and validated at.
-    sm_config_set_clkdiv(&c, (float)clock_get_hz(clk_sys) / 150000000.0f);
+    // ctrl SM: latch/blank, row select walk, BCD timing
+    pio_sm_config cc = blinky_ctrl_program_get_default_config(ctrl_offset);
+    sm_config_set_set_pins(&cc, COLUMN_LATCH, 4);
+    sm_config_set_out_shift(&cc, true, false, 32);      // shift right, no autopull (explicit pull)
+    sm_config_set_fifo_join(&cc, PIO_FIFO_JOIN_TX);
+    sm_config_set_clkdiv(&cc, div);
+    pio_sm_init(pio, ctrl_sm, ctrl_offset, &cc);
 
-      // setup dma transfer for pixel data to the pio
+    // DMA: pixel planes -> data SM, tick counts -> ctrl SM. Each stream has a
+    // reload channel that rewrites the data channel's read address on wrap, so
+    // both refresh forever with no CPU involvement.
+    planes_addr = (uint32_t)planes;
+    bcd_ticks_addr = (uint32_t)bcd_ticks;
+
     if(blinky == nullptr) {
-      dma_channel = dma_claim_unused_channel(true);
-      dma_ctrl_channel = dma_claim_unused_channel(true);
+      dma_pix = dma_claim_unused_channel(true);
+      dma_pix_reload = dma_claim_unused_channel(true);
+      dma_tick = dma_claim_unused_channel(true);
+      dma_tick_reload = dma_claim_unused_channel(true);
     }
-    dma_channel_config ctrl_config = dma_channel_get_default_config(dma_ctrl_channel);
-    channel_config_set_transfer_data_size(&ctrl_config, DMA_SIZE_32);
-    channel_config_set_read_increment(&ctrl_config, false);
-    channel_config_set_write_increment(&ctrl_config, false);
-    channel_config_set_chain_to(&ctrl_config, dma_channel);
 
-    dma_channel_configure(
-      dma_ctrl_channel,
-      &ctrl_config,
-      &dma_hw->ch[dma_channel].read_addr,
-      &bitstream_addr,
-      1,
-      false
-    );
+    dma_channel_config pc = dma_channel_get_default_config(dma_pix);
+    channel_config_set_transfer_data_size(&pc, DMA_SIZE_32);
+    channel_config_set_dreq(&pc, pio_get_dreq(pio, data_sm, true));
+    channel_config_set_chain_to(&pc, dma_pix_reload);
+    dma_channel_configure(dma_pix, &pc, &pio->txf[data_sm], planes, PLANES_LENGTH, false);
 
+    dma_channel_config prc = dma_channel_get_default_config(dma_pix_reload);
+    channel_config_set_transfer_data_size(&prc, DMA_SIZE_32);
+    channel_config_set_read_increment(&prc, false);
+    channel_config_set_write_increment(&prc, false);
+    channel_config_set_chain_to(&prc, dma_pix);
+    dma_channel_configure(dma_pix_reload, &prc, &dma_hw->ch[dma_pix].read_addr, &planes_addr, 1, false);
 
-    dma_channel_config config = dma_channel_get_default_config(dma_channel);
-    channel_config_set_transfer_data_size(&config, DMA_SIZE_32);
-    channel_config_set_bswap(&config, false); // byte swap to reverse little endian
-    channel_config_set_dreq(&config, pio_get_dreq(bitstream_pio, bitstream_sm, true));
-    channel_config_set_chain_to(&config, dma_ctrl_channel); 
+    dma_channel_config tc = dma_channel_get_default_config(dma_tick);
+    channel_config_set_transfer_data_size(&tc, DMA_SIZE_32);
+    channel_config_set_dreq(&tc, pio_get_dreq(pio, ctrl_sm, true));
+    channel_config_set_chain_to(&tc, dma_tick_reload);
+    dma_channel_configure(dma_tick, &tc, &pio->txf[ctrl_sm], bcd_ticks, BCD_FRAME_COUNT, false);
 
-    dma_channel_configure(
-      dma_channel,
-      &config,
-      &bitstream_pio->txf[bitstream_sm],
-      NULL,
-      BITSTREAM_LENGTH / 4,
-      false);
+    dma_channel_config trc = dma_channel_get_default_config(dma_tick_reload);
+    channel_config_set_transfer_data_size(&trc, DMA_SIZE_32);
+    channel_config_set_read_increment(&trc, false);
+    channel_config_set_write_increment(&trc, false);
+    channel_config_set_chain_to(&trc, dma_tick);
+    dma_channel_configure(dma_tick_reload, &trc, &dma_hw->ch[dma_tick].read_addr, &bcd_ticks_addr, 1, false);
 
-    pio_sm_init(bitstream_pio, bitstream_sm, bitstream_sm_offset, &c);
-
-    pio_sm_set_enabled(bitstream_pio, bitstream_sm, true);
-
-    // start the control channel
-    dma_start_channel_mask(1u << dma_ctrl_channel);
+    // Enable both SMs (they block on their FIFOs), then start both streams
+    pio_sm_set_enabled(pio, data_sm, true);
+    pio_sm_set_enabled(pio, ctrl_sm, true);
+    dma_start_channel_mask((1u << dma_pix) | (1u << dma_tick));
 
     blinky = this;
   }
@@ -300,51 +280,26 @@ namespace pimoroni {
     }
   }
 
-  void Blinky::dma_safe_abort(uint channel) {
-    // Tear down the DMA channel.
-    // This is copied from: https://github.com/raspberrypi/pico-sdk/pull/744/commits/5e0e8004dd790f0155426e6689a66e08a83cd9fc
-    uint32_t irq0_save = dma_hw->inte0 & (1u << channel);
-    hw_clear_bits(&dma_hw->inte0, irq0_save);
-
-    dma_hw->abort = 1u << channel;
-
-    // To fence off on in-flight transfers, the BUSY bit should be polled
-    // rather than the ABORT bit, because the ABORT bit can clear prematurely.
-    while (dma_hw->ch[channel].ctrl_trig & DMA_CH0_CTRL_TRIG_BUSY_BITS) tight_loop_contents();
-
-    // Clear the interrupt (if any) and restore the interrupt masks.
-    dma_hw->ints0 = 1u << channel;
-    hw_set_bits(&dma_hw->inte0, irq0_save);
-  }
-
   void Blinky::set_pixel(int x, int y, uint8_t v) {
     if(x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
 
-    // make those coordinates sane
-    x = (WIDTH - 1) - x;
-    //y = (HEIGHT - 1) - y;
-
-    //v = (v * this->brightness) >> 8;
-    //uint32_t gamma_v = (uint32_t)GAMMA_14BIT[v];
+    // Column order into the shift chain. Verify orientation on hardware; if the
+    // image is mirrored horizontally, drop this flip.
+    uint32_t col = (WIDTH - 1) - x;
+    uint32_t word = col >> 5;             // 0 for columns 0-31, 1 for 32-38
+    uint32_t bit = col & 31;
 
     uint32_t gamma_v = (uint32_t)GAMMA_14BIT[v] * this->brightness;
     gamma_v >>= 8;
 
-    // for each row:
-    //   for each bcd frame:
-    //            0: 00011111                           // row pixel count (minus one)
-    //      1  - 32: xxxxxbgr, xxxxxbgr, xxxxxbgr, ...  // pixel data
-    //      33 - 35: xxxxxxxx, xxxxxxxx, xxxxxxxx       // dummy bytes to dword align
-    //           36: xxxxrrrr                           // row select bits
-    //      37 - 39: tttttttt, tttttttt, tttttttt       // bcd tick count (0-65536)
-    //
-    //  .. and back to the start
-
-    // set the appropriate bits in the separate bcd frames
+    // Scatter the 14 gamma bits across the 14 bit-planes for this row.
     for(uint8_t frame = 0; frame < BCD_FRAME_COUNT; frame++) {
-      uint8_t *p = &bitstream[(y * ROW_BYTES) + (BCD_FRAME_BYTES * frame) + 2 + x];
-
-      *p = (uint8_t)(gamma_v & 0b1);
+      uint32_t *p = &planes[((frame * ROW_COUNT) + y) * PLANE_WORDS + word];
+      if(gamma_v & 1) {
+        *p |= (1u << bit);
+      } else {
+        *p &= ~(1u << bit);
+      }
       gamma_v >>= 1;
     }
   }

@@ -1,64 +1,85 @@
-.program blinky
-.side_set 1 opt
-
-; out pins:
+; Two state machines drive the LED matrix with no CPU intervention between
+; scanlines. Splitting the work lets each SM pull from its own lean DMA stream,
+; so the redundant per-frame timing/pin control that a single SM has to inline is
+; gone: the pixel stream is pure packed pixel data and the tick stream is 14
+; words.
 ;
-; - 3: row select bit 0
-; - 4: row select bit 1
-; - 5: row select bit 2
-; - 6: row select bit 3
-
-; set pins:
+; blinky_data  shifts one row's bit-plane (WIDTH bits) into the column shift
+;              registers, then hands off to blinky_ctrl.
+; blinky_ctrl  latches the plane, walks the row-select shift register, enables
+;              the column drivers for the plane's BCD tick count, then releases
+;              blinky_data to shift the next row.
 ;
-; - 0: column data (base)
-; - 1: column latch
-; - 2: column blank
-; - 3: row data
-; - 4: row clock
-
-; sideset pin:
+; Scan order is phase-major: for each of the 14 BCD phases, all rows are scanned
+; in turn. blinky_data streams packed planes in that order; blinky_ctrl streams
+; one tick count per phase and reuses it across the phase's rows.
 ;
-; - 0: column clock
+; pin ownership (no pin is driven by both state machines):
+;   blinky_data:  16 column clock (sideset), 17 column data (out)
+;   blinky_ctrl:  18 column latch, 19 column blank, 20 row data, 21 row clock
+;                 (set pins, base 18, 4 pins: bit0 latch, bit1 blank,
+;                  bit2 row data, bit3 row clock)
+;
+; handshake IRQ flags (4-7 are internal to the PIO block):
+;   4 = DATA_READY  (data -> ctrl: the plane is in the shift register)
+;   5 = SHIFT_NEXT  (ctrl -> data: shift the next row)
 
-; for each row:
-;   for each bcd frame:
-;           0: 00011111                           // row pixel count (minus one)
-;           1: xxxxrrrr                           // row select bits
-;     2  - 65: xxxxxbgr, xxxxxbgr, xxxxxbgr, ...  // pixel data
-;     66 - 67: xxxxxxxx, xxxxxxxx                 // dummy bytes to dword align
-;     68 - 71: tttttttt, tttttttt, tttttttt       // bcd tick count (0-65536)
-; 
-; .. and back to the start
 
+.program blinky_data
+.side_set 1 opt                     ; column clock
+
+; OSR: packed pixel planes, autopull, shift right, threshold 32. Each plane is
+; WIDTH bits followed by padding to a 64-bit (2-word) boundary, so planes stay
+; word-aligned. Y holds WIDTH-1, preloaded once (set's 5-bit immediate can't
+; reach 38), and is copied to X to bound the per-plane bit loop.
 
 .wrap_target
+    mov x, y                side 0      ; reload column count (WIDTH - 1)
+bit:
+    out pins, 1             side 0 [3]  ; column data = pixel bit, clock low
+    jmp x-- bit             side 1 [3]  ; clock high, shift the bit in
+    out null, 25            side 0      ; discard padding to the 64-bit boundary
+    irq set 4                           ; DATA_READY: plane loaded
+    wait 1 irq 5                        ; wait for ctrl before the next row
+.wrap
 
-    out pins, 2 [2]                 ; output column clock and row data phase A
-    out pins, 2 [2]                 ; output column clock and row data phase B
-    out null, 4                     ; discard four dummy bits
 
-    out y, 8                        ; get row pixel count (minus 1 because test is pre decrement)
-pixels:
-    ; bit
-    out x, 1            side 0  [1] ; pull in colour bit from OSR into register X, clear clock
-    set pins, 0b100                 ; clear data bit, blank high
-    jmp !x bit_end                  ; if bit was zero jump
-    set pins, 0b101                 ; set data bit, blank high
-  bit_end:
-    out null, 7         side 1 [2]  ; clock in bit
+.program blinky_ctrl
 
-  jmp y-- pixels
+; Inter-row blank dead time, in ~53ns units (0-31). Held blank-high after the
+; new row is selected and latched but before it lights, giving the just-
+; deselected row time to fully turn off. Raise to clear inter-row ghosting,
+; lower to recover a little brightness.
+.define ROW_SETTLE 12
 
-  out null, 24                      ; discard dummy bytes
+; OSR: one BCD tick count per phase (autopull off, explicit pull, reused via
+; mov). X: row counter. Y: BCD delay / settle scratch.
 
-  set pins, 0b110 [5]               ; latch high, blank high
-  set pins, 0b000                   ; blank low (enable output)
+.wrap_target
+    pull block                          ; tick count for this phase -> OSR
+    set x, 30                           ; ROW_COUNT - 1 (31 rows)
 
-; loop over bcd delay period
-  out y, 32                         ; get bcd delay counter value
-bcd_delay:
-  jmp y-- bcd_delay
+    ; inject the single '1' that walks the row-select shift register, selecting
+    ; row 0. blank (bit1) stays high throughout so nothing is lit yet.
+    set pins, 0b0110                    ; blank high, row data high, clock low
+    set pins, 0b1110 [1]                ; row clock high (shift the 1 in)
+    set pins, 0b0010                    ; row clock low, row data low
 
-  set pins 0b100                    ; blank high (disable output)
-
+row:
+    wait 1 irq 4                        ; DATA_READY: column register holds this row
+    set pins, 0b0011 [5]               ; latch high, blank high
+    set pins, 0b0010                   ; latch low, blank high
+    set y, ROW_SETTLE                   ; blank-high dead time so the old row
+settle:                                 ; is fully off before this one lights
+    jmp y-- settle [7]                  ; ROW_SETTLE * 8 cycles
+    mov y, osr                         ; fresh BCD delay from the tick count
+    set pins, 0b0000                   ; blank low: this row is lit
+    ; to overlap the next shift with this display, move the irq set 5 to here
+bcd:
+    jmp y-- bcd
+    set pins, 0b0010                   ; blank high: this row is dark
+    irq set 5                          ; SHIFT_NEXT: release data SM
+    set pins, 0b1010 [1]               ; row clock high (walk select to next row)
+    set pins, 0b0010                   ; row clock low
+    jmp x-- row
 .wrap
