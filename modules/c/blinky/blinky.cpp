@@ -44,7 +44,7 @@ mp_obj_t Blinky_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
 /***** Destructor ******/
 mp_obj_t Blinky___del__(mp_obj_t self_in) {
     _Blinky_obj_t *self = MP_OBJ_TO_PTR2(self_in, _Blinky_obj_t);
-    m_del_class(Blinky, self->blinky);
+    self->blinky->~Blinky();
     return mp_const_none;
 }
 
