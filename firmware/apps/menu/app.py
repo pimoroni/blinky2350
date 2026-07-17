@@ -4,6 +4,9 @@ from easing import easeInOutCirc
 import math
 
 
+DEFAULT_ICON = image.load("default_icon.png")
+
+
 class App:
     def __init__(self, collection, name, path, icon):
         self.index = len(collection)
@@ -47,8 +50,9 @@ class Apps:
             name = " ".join([capitalize(word) for word in path.split("_")])
 
             if is_dir(f"{root}/{path}"):
-                if file_exists(f"{root}/{path}/icon.png"):
-                    App(self.apps, name, path, image.load(f"{root}/{path}/icon.png"))
+                if file_exists(f"{root}/{path}/__init__.py") and path != "menu":
+                    icon = image.load(f"{root}/{path}/icon.png") if file_exists(f"{root}/{path}/icon.png") else DEFAULT_ICON
+                    App(self.apps, name, path, icon)
 
     @property
     def active(self):
