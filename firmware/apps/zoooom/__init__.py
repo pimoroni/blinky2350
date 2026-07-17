@@ -35,7 +35,7 @@ background = None
 wall_tex = None
 obst_tex = None
 wall_variation = 0
-player_sprites = SpriteSheet("assets/player.png", 9, 1)
+player_sprites = image.load("assets/player.png").spritesheet(9, 1)
 
 # Setting up lots of variables that persist frame to frame.
 start_side_length = 2
@@ -72,8 +72,8 @@ def init_game():
     level_seed = random.randint(0, len(levels) - 1)
     current_level = levels[level_seed]
     background = image.load(f"assets/{current_level.texture_pack}_bg.png")
-    wall_tex = SpriteSheet(f"assets/{current_level.texture_pack}_wall.png", 8, 1)
-    obst_tex = SpriteSheet(f"assets/{current_level.texture_pack}_obst.png", 5, 7)
+    wall_tex = image.load(f"assets/{current_level.texture_pack}_wall.png").spritesheet(8, 1)
+    obst_tex = image.load(f"assets/{current_level.texture_pack}_obst.png").spritesheet(5, 7)
     start_screen = True
     fade_counter = 255
     wall_variation = current_level.wall_variation

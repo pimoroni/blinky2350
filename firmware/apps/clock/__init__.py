@@ -69,12 +69,12 @@ drawing_brush = color.rgb(255, 255, 255)
 falling_sand = FallingSand()
 
 if state["clock_style"] == DisplayType.scribble:
-    numerals = SpriteSheet("assets/scribble_num.png", 10, 1)
+    numerals = image.load("assets/scribble_num.png").spritesheet(10, 1)
     background = image.load("assets/scribble_bg.png")
     clock_dots = image.load("assets/scribble_dots.png")
 elif state["clock_style"] == DisplayType.sevenseg:
-    numerals = SpriteSheet("assets/sevenseg_num.png", 10, 1)
-    clock_dots = SpriteSheet("assets/sevenseg_dots.png", 2, 1)
+    numerals = image.load("assets/sevenseg_num.png").spritesheet(10, 1)
+    clock_dots = image.load("assets/sevenseg_dots.png").spritesheet(2, 1)
     background = None
     foreground = None
 
@@ -196,14 +196,14 @@ def display_time():
         draw_sand_clock(currenttime)
 
     elif state["clock_style"] == DisplayType.scribble:
-        numerals = SpriteSheet("assets/scribble_num.png", 10, 1)
+        numerals = image.load("assets/scribble_num.png").spritesheet(10, 1)
         background = image.load("assets/scribble_bg.png")
         clock_dots = image.load("assets/scribble_dots.png")
         draw_scribble_clock(currenttime)
 
     elif state["clock_style"] == DisplayType.sevenseg:
-        numerals = SpriteSheet("assets/sevenseg_num.png", 10, 1)
-        clock_dots = SpriteSheet("assets/sevenseg_dots.png", 2, 1)
+        numerals = image.load("assets/sevenseg_num.png").spritesheet(10, 1)
+        clock_dots = image.load("assets/sevenseg_dots.png").spritesheet(2, 1)
         background = None
         foreground = None
         draw_sevenseg_clock(currenttime)
