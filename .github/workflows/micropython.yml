@@ -57,12 +57,6 @@ jobs:
         restore-keys: |
           prepare-all-${{ env.CI_CACHE_KEY }}
 
-    - name: "Checkout Project"
-      uses: actions/checkout@v7
-      with:
-        submodules: true
-        path: ${{ env.CI_PROJECT_ROOT }}
-
     - name: "Install Arm GNU Toolchain (arm-none-eabi-gcc)"
       uses: carlosperate/arm-none-eabi-gcc-action@v1
       with:
@@ -97,7 +91,7 @@ jobs:
       shell: bash
       run: |
         source $CI_PROJECT_ROOT/ci/micropython.sh
-        ci_cmake_build ${{ matrix.name }}
+        ci_cmake_build
 
     - name: "Artifacts: Upload .uf2"
       uses: actions/upload-artifact@v7
