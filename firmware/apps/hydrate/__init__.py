@@ -17,7 +17,7 @@ state = {
 screen.antialias = image.X4
 set_brightness(0.1)
 
-large_font = pixel_font.load("/system/assets/fonts/smart.ppf")
+large_font = font.smart
 screen.font = large_font
 
 

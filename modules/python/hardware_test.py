@@ -46,7 +46,7 @@ c = Pin.board.BUTTON_C
 home = Pin.board.BUTTON_HOME
 power = Pin.board.POWER_EN
 
-font_ignore = rom_font.smart
+font_ignore = font.smart
 screen.font = font_ignore
 
 rtc = rtc.pcf85063a.PCF85063A(I2C())

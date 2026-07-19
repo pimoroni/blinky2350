@@ -33,7 +33,7 @@ background = color.rgb(0, 0, 0)
 white = color.rgb(35, 41, 37)
 
 try:
-    small_font = rom_font.winds
+    small_font = font.winds
 except OSError:
     small_font = None
 

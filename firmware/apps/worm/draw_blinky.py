@@ -4,8 +4,8 @@ import os
 sys.path.insert(0, "/system/apps/worm")
 os.chdir("/system/apps/worm")
 
-small_font = rom_font.nope
-very_small_font = rom_font.sins
+small_font = font.nope
+very_small_font = font.sins
 
 screen.antialias = image.X2
 
@@ -118,7 +118,7 @@ class renderer:
     # Drawing the game over screen is again just images and text like the intro screen.
     def draw_gameover(self, score):
         if not self.scroll:
-            self.scroll = text.scroll(f"Score: {score}", font_face=rom_font.ark, align=screen.height - 11)
+            self.scroll = text.scroll(f"Score: {score}", font_face=font.ark, align=screen.height - 11)
 
         bg = image.load("assets/gameover.png")
         screen.blit(bg, vec2(0, 0))

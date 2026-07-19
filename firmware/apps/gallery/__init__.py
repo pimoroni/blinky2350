@@ -5,7 +5,7 @@ from badgeware import set_brightness
 sys.path.insert(0, "/system/apps/gallery")
 os.chdir("/system/apps/gallery")
 
-screen.font = rom_font.sins
+screen.font = font.sins
 screen.antialias = image.X2
 
 set_brightness(0.2)

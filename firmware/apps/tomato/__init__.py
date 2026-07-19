@@ -19,8 +19,8 @@ from badgeware import set_brightness
 CX = screen.width // 2
 CY = screen.height // 2
 
-small_font = pixel_font.load("/system/assets/fonts/winds.ppf")
-large_font = pixel_font.load("/system/assets/fonts/smart.ppf")
+small_font = font.winds
+large_font = font.smart
 screen.font = small_font
 
 scroll = None
@@ -36,7 +36,7 @@ def center_text(t, y):
         screen.text(t, (screen.width - w) / 2, y)
     else:
         if not scroll:
-            scroll = text.scroll(t, font_face=rom_font.winds, align=y)
+            scroll = text.scroll(t, font_face=font.winds, align=y)
         scroll()
 
 
