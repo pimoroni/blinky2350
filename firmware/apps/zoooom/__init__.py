@@ -14,7 +14,7 @@ title = image.load("assets/title.png")
 ready = image.load("assets/ready.png")
 game_over = image.load("assets/game_over.png")
 
-ark_font = rom_font.ark
+ark_font = font.ark
 screen.font = ark_font
 screen_buffer.antialias = image.OFF
 
@@ -495,7 +495,7 @@ def update():
     # If we're on game over, just randomly pick one of the five images with static to display, display it and loop until the user presses any button.
     elif game_state == GameState.GAME_OVER:
         if not scroll:
-            scroll = text.scroll(f"Score: {level_segments_passed}", font_face=rom_font.ark, align=screen.height - 11)
+            scroll = text.scroll(f"Score: {level_segments_passed}", font_face=font.ark, align=screen.height - 11)
 
         screen.clear()
         screen.blit(game_over, vec2(0, 0))

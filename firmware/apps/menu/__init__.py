@@ -11,7 +11,7 @@ import math
 
 
 set_brightness(0.2)
-screen.font = pixel_font.load("/system/assets/fonts/ark.ppf")
+screen.font = font.ark
 
 # find installed apps and create apps
 apps = Apps("/system/apps")

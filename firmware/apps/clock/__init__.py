@@ -58,9 +58,9 @@ State.load("clock", state)
 clock_state = ClockState.Running
 
 # Loading all the assets.
-textclock_font = rom_font.winds
-dots_font = rom_font.hungry
-small_font = rom_font.torch
+textclock_font = font.winds
+dots_font = font.hungry
+small_font = font.torch
 
 faded_brush = color.rgb(255, 255, 255, 100)
 bg_brush = color.rgb(0, 0, 0)
@@ -128,7 +128,7 @@ regions = {
 def user_message(caption, line1):
     # A simple message screen with a single line of text.
 
-    small_font = rom_font.winds
+    small_font = font.winds
 
     screen.pen = color.black
     screen.clear()
