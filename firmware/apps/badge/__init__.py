@@ -15,10 +15,10 @@ state = {
 State.load("badge", state)
 
 set_brightness(state["brightness"])
-font_list = dir(rom_font)
+font_list = dir(font)
 font_index = font_list.index(state["font"])
 
-scroll = text.scroll(TEXT, font_face=getattr(rom_font, state["font"]))
+scroll = text.scroll(TEXT, font_face=getattr(font, state["font"]))
 
 changed = False
 
@@ -46,7 +46,7 @@ def update():
 
     if changed:
         state["font"] = font_list[font_index]
-        scroll = text.scroll(TEXT, font_face=getattr(rom_font, state["font"]))
+        scroll = text.scroll(TEXT, font_face=getattr(font, state["font"]))
         State.save("badge", state)
         changed = False
 
