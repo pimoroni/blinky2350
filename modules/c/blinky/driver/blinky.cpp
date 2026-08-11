@@ -9,6 +9,10 @@
 #include "blinky.pio.h"
 #endif
 
+#if defined(__ARM_FEATURE_SIMD32)
+#include <arm_acle.h>
+#endif
+
 #include "blinky.hpp"
 
 // pixel data is stored as a stream of bits delivered in the
@@ -389,6 +393,17 @@ namespace pimoroni {
     return framebuffer;
   }
 
+  // Sum the R, G and B bytes of a pixel. USAD8 adds all four byte lanes in a
+  // single DSP instruction, so mask off the unused top byte first; falls back to
+  // scalar extraction where the SIMD32 extension is unavailable.
+  static inline uint32_t rgb_sum(uint32_t col) {
+#if defined(__ARM_FEATURE_SIMD32)
+    return __usad8(col & 0x00ffffffu, 0);
+#else
+    return ((col >> 16) & 0xff) + ((col >> 8) & 0xff) + (col & 0xff);
+#endif
+  }
+
   // Downsample the SS*SS logical framebuffer to the physical panel. Templated on
   // the factor so the block loops unroll and the divisor is a compile-time
   // constant (reciprocal multiply rather than a division per pixel).
@@ -406,8 +421,7 @@ namespace pimoroni {
         for(int sy = 0; sy < SS; sy++) {
           uint32_t *row = &framebuffer[(y * SS + sy) * fb_width + x * SS];
           for(int sx = 0; sx < SS; sx++) {
-            uint32_t col = row[sx];
-            accumulator += ((col >> 16) & 0xff) + ((col >> 8) & 0xff) + (col & 0xff);
+            accumulator += rgb_sum(row[sx]);
           }
         }
         set_pixel(x, y, accumulator / divisor);
