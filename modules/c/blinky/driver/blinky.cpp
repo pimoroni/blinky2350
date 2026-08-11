@@ -42,7 +42,9 @@ static uint32_t dma_channel;
 static uint32_t dma_ctrl_channel;
 
 namespace pimoroni {
-  uint32_t __attribute__((section(".uninitialized_data"))) __attribute__ ((aligned (4))) framebuffer[Blinky::WIDTH * Blinky::HEIGHT];
+  // sized for the largest supersample factor so the logical framebuffer can be
+  // resized at runtime without reallocating
+  uint32_t __attribute__((section(".uninitialized_data"))) __attribute__ ((aligned (4))) framebuffer[Blinky::WIDTH * Blinky::MAX_SUPERSAMPLE * Blinky::HEIGHT * Blinky::MAX_SUPERSAMPLE];
 
   // DMA source, kept in SRAM (.bss), zero-initialised, 32-bit aligned. See blinky.hpp.
   alignas(4) uint8_t Blinky::bitstream[Blinky::BITSTREAM_LENGTH];
@@ -366,27 +368,60 @@ namespace pimoroni {
     this->set_brightness(this->get_brightness() + delta);
   }
 
+  void Blinky::set_supersample(int scale) {
+    if(scale != 1 && scale != 2 && scale != 4) scale = 1;
+    supersample = scale;
+  }
+
+  int Blinky::get_supersample() {
+    return supersample;
+  }
+
+  int Blinky::get_width() {
+    return WIDTH * supersample;
+  }
+
+  int Blinky::get_height() {
+    return HEIGHT * supersample;
+  }
+
   uint32_t* Blinky::get_framebuffer() {
     return framebuffer;
   }
 
-  void Blinky::update() {
-    if(blinky == this) {
-      uint32_t *p = (uint32_t *)framebuffer;
+  // Downsample the SS*SS logical framebuffer to the physical panel. Templated on
+  // the factor so the block loops unroll and the divisor is a compile-time
+  // constant (reciprocal multiply rather than a division per pixel).
+  template<int SS>
+  void Blinky::downsample() {
+    const int fb_width = WIDTH * SS;
 
-      for(uint8_t y = 0; y < HEIGHT; y++) {
-        for(uint8_t x = 0; x < WIDTH; x++) {
-          uint32_t col = *p;
-          uint8_t r = (col & 0xff0000) >> 16;
-          uint8_t g = (col & 0x00ff00) >> 8;
-          uint8_t b = (col & 0x0000ff) >> 0;
+    // sum of (r + g + b) over the block, divided by 3 for the mono mapping; the
+    // panel turns the averaged brightness into subpixel-smooth motion
+    const uint32_t divisor = 3 * SS * SS;
 
-          // Approximate brightness of the colour, mapped to our mono display
-          uint16_t brightness = ((r + g + b) * 255) / 765;
-          set_pixel(x, y, brightness);
-          p++;
+    for(int y = 0; y < HEIGHT; y++) {
+      for(int x = 0; x < WIDTH; x++) {
+        uint32_t accumulator = 0;
+        for(int sy = 0; sy < SS; sy++) {
+          uint32_t *row = &framebuffer[(y * SS + sy) * fb_width + x * SS];
+          for(int sx = 0; sx < SS; sx++) {
+            uint32_t col = row[sx];
+            accumulator += ((col >> 16) & 0xff) + ((col >> 8) & 0xff) + (col & 0xff);
+          }
         }
+        set_pixel(x, y, accumulator / divisor);
       }
+    }
+  }
+
+  void Blinky::update() {
+    if(blinky != this) return;
+
+    switch(supersample) {
+      case 4:  downsample<4>(); break;
+      case 2:  downsample<2>(); break;
+      default: downsample<1>(); break;
     }
   }
 

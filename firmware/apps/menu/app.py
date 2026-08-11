@@ -15,20 +15,25 @@ class App:
         self.path = path
         collection.append(self)
 
-    def draw(self, offset, scale=1):
-        # draw the icon sprite
+    def draw(self, offset, scale=1, snap_x=False):
+        # draw the icon sprite, scaled up for the supersampled framebuffer
+        scale *= display.SCALE
 
         position = vec2(screen.width // 2, screen.height // 2)
         position += offset
 
+        x = position.x - 12 * scale
+        y = position.y - 12 * scale
+
+        # A settled icon centres on a half physical pixel (screen.width // 2 is not
+        # a multiple of the supersample factor), which smears it horizontally. Snap
+        # the origin to the grid when it's at rest; the slide stays sub-pixel smooth.
+        if snap_x:
+            x = round(x / display.SCALE) * display.SCALE
+
         screen.blit(
             self.icon,
-            rect(
-                position.x - 12 * scale,
-                position.y - 12 * scale,
-                24 * scale,
-                24 * scale
-            )
+            rect(x, y, 24 * scale, 24 * scale)
         )
 
 
@@ -101,12 +106,15 @@ class Apps:
 
         offset.x += -screen.width * self.direction
         if animation_done:
-            offset.y += math.sin(badge.ticks / 150) * 2
+            offset.y += math.sin(badge.ticks / 150) * 2 * display.SCALE
 
-        app.draw(offset, scale)
+        # snap the active icon to the grid once it's settled, so it sits crisp
+        app.draw(offset, scale, snap_x=animation_done and not self.launching)
 
         if self.launching and animation_done:
             set_brightness(0.2)
+            # hand the panel back to launched apps at native resolution
+            badge.mode(LORES)
             return f"/system/apps/{app.path}"
 
         return None
