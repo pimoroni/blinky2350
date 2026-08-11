@@ -8,6 +8,7 @@ MP_DEFINE_CONST_FUN_OBJ_1(Blinky_update_obj, Blinky_update);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_set_brightness_obj, Blinky_set_brightness);
 MP_DEFINE_CONST_FUN_OBJ_1(Blinky_get_brightness_obj, Blinky_get_brightness);
 MP_DEFINE_CONST_FUN_OBJ_2(Blinky_adjust_brightness_obj, Blinky_adjust_brightness);
+MP_DEFINE_CONST_FUN_OBJ_2(Blinky_set_supersample_obj, Blinky_set_supersample);
 
 /***** Binding of Methods *****/
 static const mp_rom_map_elem_t Blinky_locals_dict_table[] = {
@@ -17,9 +18,7 @@ static const mp_rom_map_elem_t Blinky_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_brightness), MP_ROM_PTR(&Blinky_set_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_brightness), MP_ROM_PTR(&Blinky_get_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_adjust_brightness), MP_ROM_PTR(&Blinky_adjust_brightness_obj) },
-
-    { MP_ROM_QSTR(MP_QSTR_WIDTH), MP_ROM_INT(39) },
-    { MP_ROM_QSTR(MP_QSTR_HEIGHT), MP_ROM_INT(26) }
+    { MP_ROM_QSTR(MP_QSTR_set_supersample), MP_ROM_PTR(&Blinky_set_supersample_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(Blinky_locals_dict, Blinky_locals_dict_table);
@@ -32,6 +31,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     make_new, Blinky_make_new,
     buffer, Blinky_get_framebuffer,
     print, Blinky_print,
+    attr, Blinky_attr,
     locals_dict, (mp_obj_dict_t*)&Blinky_locals_dict
 );
 

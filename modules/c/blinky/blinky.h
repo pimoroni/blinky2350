@@ -16,5 +16,9 @@ extern mp_obj_t Blinky_set_brightness(mp_obj_t self_in, mp_obj_t value);
 extern mp_obj_t Blinky_get_brightness(mp_obj_t self_in);
 extern mp_obj_t Blinky_adjust_brightness(mp_obj_t self_in, mp_obj_t delta);
 
+extern mp_obj_t Blinky_set_supersample(mp_obj_t self_in, mp_obj_t value);
+
+extern void Blinky_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest);
+
 extern mp_int_t Blinky_get_framebuffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 

@@ -5,6 +5,9 @@ sys.path.insert(0, "/system/apps/menu")
 sys.path.insert(0, "/")
 os.chdir("/system/apps/menu")
 
+# Supersample the menu so icon slides/bobs move smoothly across the panel
+badge.mode(SS_X4)
+
 from badgeware import set_brightness
 from app import Apps
 import math
@@ -12,6 +15,9 @@ import math
 
 set_brightness(0.2)
 screen.font = font.ark
+
+# Pixel dimensions the menu draws in are multiplied by the supersample factor
+SCALE = display.SCALE
 
 # find installed apps and create apps
 apps = Apps("/system/apps")
@@ -23,17 +29,17 @@ def draw_battery(level):
 
     screen.pen = color.rgb(100, 100, 100)
     # draw the battery indicator
-    size = (5, 3)
-    pos = (screen.width - (size[0] + 1), 0)
+    size = (5 * SCALE, 3 * SCALE)
+    pos = (screen.width - (size[0] + SCALE), 0)
     screen.shape(shape.rectangle(*pos, *size))
-    screen.put(pos[0] + size[0], pos[1] + 1)
+    screen.put(pos[0] + size[0], pos[1] + SCALE)
     screen.pen = color.black
-    screen.shape(shape.rectangle(pos[0] + 1, pos[1] + 1, size[0] - 2, size[1] - 2))
+    screen.shape(shape.rectangle(pos[0] + SCALE, pos[1] + SCALE, size[0] - 2 * SCALE, size[1] - 2 * SCALE))
 
     # draw the battery fill level
     screen.pen = color.rgb(100, 100, 100)
-    width = ((size[0] - 1) / 100) * level
-    screen.shape(shape.rectangle(pos[0] + 1, pos[1] + 2, width, size[1] - 4))
+    width = ((size[0] - SCALE) / 100) * level
+    screen.shape(shape.rectangle(pos[0] + SCALE, pos[1] + 2 * SCALE, width, size[1] - 4 * SCALE))
 
 
 

@@ -8,8 +8,13 @@ namespace pimoroni {
 
   class Blinky {
   public:
+    // physical LED matrix dimensions
     static const int WIDTH  = 39;
     static const int HEIGHT = 26;
+
+    // largest supersample factor; the framebuffer is sized for this and
+    // update() box-downsamples each factor*factor block to one physical pixel
+    static const int MAX_SUPERSAMPLE = 4;
 
     // pin assignments
     static const uint8_t COLUMN_CLOCK           = 16;
@@ -36,6 +41,10 @@ namespace pimoroni {
 
     uint16_t brightness = 128;
 
+    // supersample factor (1, 2 or 4); the logical framebuffer is
+    // WIDTH*supersample x HEIGHT*supersample
+    int supersample = 1;
+
     // DMA source for the LED-matrix refresh. It is streamed continuously by DMA,
     // so it MUST live in SRAM: if it lands in PSRAM (e.g. via the GC heap) the
     // constant refresh reads contend with USB/XIP on the QSPI bus and throttle
@@ -61,6 +70,13 @@ namespace pimoroni {
     float get_brightness();
     void adjust_brightness(float delta);
 
+    void set_supersample(int scale);
+    int get_supersample();
+
+    // current logical framebuffer dimensions (physical * supersample)
+    int get_width();
+    int get_height();
+
     void set_pixel(int x, int y, uint8_t v);
 
     uint32_t* get_framebuffer();
@@ -68,6 +84,7 @@ namespace pimoroni {
   private:
     void partial_teardown();
     void dma_safe_abort(uint channel);
+    template<int SS> void downsample();
   };
 
 }

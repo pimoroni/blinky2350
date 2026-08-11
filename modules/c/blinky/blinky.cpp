@@ -81,11 +81,35 @@ extern mp_obj_t Blinky_adjust_brightness(mp_obj_t self_in, mp_obj_t delta) {
     return mp_const_none;
 }
 
+extern mp_obj_t Blinky_set_supersample(mp_obj_t self_in, mp_obj_t value) {
+    _Blinky_obj_t *self = MP_OBJ_TO_PTR2(self_in, _Blinky_obj_t);
+    self->blinky->set_supersample(mp_obj_get_int(value));
+    return mp_const_none;
+}
+
+// Expose the current logical framebuffer dimensions and supersample factor as
+// dynamic attributes (WIDTH, HEIGHT, SCALE) since they change with the mode.
+void Blinky_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+    if(dest[0] != MP_OBJ_NULL) {
+        return; // store/delete not supported
+    }
+    _Blinky_obj_t *self = MP_OBJ_TO_PTR2(self_in, _Blinky_obj_t);
+    if(attr == MP_QSTR_WIDTH) {
+        dest[0] = mp_obj_new_int(self->blinky->get_width());
+    } else if(attr == MP_QSTR_HEIGHT) {
+        dest[0] = mp_obj_new_int(self->blinky->get_height());
+    } else if(attr == MP_QSTR_SCALE) {
+        dest[0] = mp_obj_new_int(self->blinky->get_supersample());
+    } else {
+        dest[1] = MP_OBJ_SENTINEL; // fall back to locals_dict for methods
+    }
+}
+
 mp_int_t Blinky_get_framebuffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     _Blinky_obj_t *self = MP_OBJ_TO_PTR2(self_in, _Blinky_obj_t);
     (void)flags;
     bufinfo->buf = self->blinky->get_framebuffer();
-    bufinfo->len = 160 * 120 * 4;
+    bufinfo->len = self->blinky->get_width() * self->blinky->get_height() * 4;
     bufinfo->typecode = 'B';
     return 0;
 }

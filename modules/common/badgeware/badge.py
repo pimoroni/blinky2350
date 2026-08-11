@@ -12,6 +12,11 @@ builtins.LORES = 0b00
 builtins.HIRES = 0b01
 builtins.VSYNC = 0b10
 
+# Blinky supersampling: render the logical framebuffer at 2x/4x and box-downsample
+# to the physical panel for subpixel-smooth motion. The factor lives in bits 12+.
+builtins.SS_X2 = 2 << 12
+builtins.SS_X4 = 4 << 12
+
 builtins.FAST_UPDATE = 3 << 4
 builtins.FULL_UPDATE = 0 << 4
 builtins.MEDIUM_UPDATE = 2 << 4
@@ -127,7 +132,10 @@ class Badge():
         elif MODEL == "badger":
             display.speed((self._current_mode >> 4) & 0xf)
 
-        if MODEL == "tufty" or getattr(builtins, "screen", None) is None:
+        elif MODEL == "blinky":
+            display.set_supersample((mode >> 12) or 1)
+
+        if MODEL in ("tufty", "blinky") or getattr(builtins, "screen", None) is None:
             prev_font = getattr(getattr(builtins, "screen", None), "font", None)
             brush = getattr(getattr(builtins, "screen", None), "pen", None)
             builtins.screen = image(display.WIDTH, display.HEIGHT, memoryview(display))

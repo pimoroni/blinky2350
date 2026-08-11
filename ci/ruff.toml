@@ -63,6 +63,8 @@ builtins = [
     "HIRES",
     "LORES",
     "VSYNC",
+    "SS_X2",
+    "SS_X4",
     "FAST_UPDATE",
     "FULL_UPDATE",
     "MEDIUM_UPDATE",
