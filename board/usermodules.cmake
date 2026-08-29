@@ -37,8 +37,6 @@ include(pimoroni_i2c/micropython)
 # blinky display driver
 include(modules/c/blinky/micropython)
 
-# QR Code Module
-include(qrcode/micropython/micropython)
 
 # Sensors & Breakouts
 include(micropython-common-breakouts)
