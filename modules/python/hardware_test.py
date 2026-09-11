@@ -2,9 +2,9 @@ import os
 import network
 from machine import Pin, Timer, ADC, I2C
 import time
+from pcf85063a import PCF85063A
 import powman
 import gc
-from badgeware import rtc, display, set_brightness
 
 """
 
@@ -25,12 +25,10 @@ E18 - PSRAM Test Failure
 
 """
 
-set_brightness(0.1)
+display.set_brightness(0.1)
+badge.caselights(0)
 
 WIDTH, HEIGHT = screen.width, screen.height
-
-CL = [Pin(0, Pin.OUT), Pin(1, Pin.OUT),
-      Pin(2, Pin.OUT), Pin(3, Pin.OUT)]
 
 charge_stat = Pin.board.CHARGE_STAT
 vbus_detect = Pin.board.VBUS_DETECT
@@ -49,8 +47,6 @@ power = Pin.board.POWER_EN
 font_ignore = font.smart
 screen.font = font_ignore
 
-rtc = rtc.pcf85063a.PCF85063A(I2C())
-
 
 class Tests:
     def __init__(self):
@@ -59,18 +55,19 @@ class Tests:
         self.buttons_pass = False
         self.vbus_pass = False
         self.rtc_pass = None
+        self.cl_state = 0
 
         sw_int.irq(self.btn_handler)
 
         # RTC Setup
-        self.rtc = rtc
+        self.rtc = PCF85063A(I2C())
         self.rtc.clear_timer_flag()
         self.rtc.enable_timer_interrupt(True)
         self.rtc_start = time.time()
 
-        # Toggle the case lights once every second
+        # Toggle the case lights while the test runs
         self.cl_timer = Timer()
-        self.cl_timer.init(mode=Timer.PERIODIC, period=1000, callback=self.cl_toggle)
+        self.cl_timer.init(mode=Timer.PERIODIC, period=250, callback=self.cl_toggle)
 
         # We want to check the RTC alarm has trigger
         self.rtc_timer = Timer()
@@ -109,7 +106,7 @@ class Tests:
         screen.pen = color.black
         screen.clear()
         screen.pen = color.white
-        screen.text(str(error), 5, 3)
+        screen.text(str(error), rect(0, 0, WIDTH, HEIGHT), align=(CENTER, MIDDLE))
         display.update()
 
     def test_buttons(self):
@@ -168,9 +165,8 @@ class Tests:
 
     # Toggle the case lights on the back of the badge
     def cl_toggle(self, _t):
-        for led in CL:
-            led.toggle()
-        time.sleep(0.2)
+        self.cl_state = 0 if self.cl_state else 1
+        badge.caselights(self.cl_state)
 
     def clear_flag(self):
         # Now the test has complete, we can remove the flag.
@@ -186,7 +182,7 @@ class Tests:
         self.clear_flag()
 
         # Time to sleep now!
-        powman.sleep()
+        powman.shipping_mode()
 
     def run(self):
 
@@ -257,6 +253,7 @@ class Tests:
 
         b.irq(self.exit_handler)
         self.cl_timer.deinit()
+        badge.caselights(1)
         self.display_error("OK")
         time.sleep(0.2)
         while True:
@@ -287,10 +284,11 @@ class Tests:
         self.rtc_timer.deinit()
 
     def test_vbus(self):
+        self.display_error("<")
+
         start_time = time.time()
 
         while True:
-            self.display_error("<")
             # Time out to catch the user not removing the USB
             # Or to end the test if there's a failure on VBUS_DETECT
             if time.time() - start_time < 5:
