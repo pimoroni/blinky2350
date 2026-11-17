@@ -1,8 +1,8 @@
 import sys
 import os
 
-sys.path.insert(0, "/system/apps/hydrate")
-os.chdir("/system/apps/hydrate")
+sys.path.insert(0, "/apps/hydrate")
+os.chdir("/apps/hydrate")
 
 from badgeware import State, set_brightness
 

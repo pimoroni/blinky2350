@@ -2,8 +2,8 @@ import os
 import sys
 from badgeware import set_brightness
 
-sys.path.insert(0, "/system/apps/gallery")
-os.chdir("/system/apps/gallery")
+sys.path.insert(0, "/apps/gallery")
+os.chdir("/apps/gallery")
 
 screen.font = font.sins
 screen.antialias = image.X2
@@ -22,7 +22,7 @@ image_files = [
 total_files = len(image_files)
 
 if total_files == 0:
-    fatal_error("No images found!", "Use the Badgeware IDE to copy your PNGs to /system/apps/gallery/images")
+    fatal_error("No images found!", "Use the Badgeware IDE to copy your PNGs to /apps/gallery/images")
 
 bar_width = screen.width - 2
 bar_x = (screen.width // 2) - (bar_width // 2)

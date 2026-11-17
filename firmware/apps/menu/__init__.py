@@ -1,9 +1,9 @@
 import os
 import sys
 
-sys.path.insert(0, "/system/apps/menu")
+sys.path.insert(0, "/apps/menu")
 sys.path.insert(0, "/")
-os.chdir("/system/apps/menu")
+os.chdir("/apps/menu")
 
 # Supersample the menu so icon slides/bobs move smoothly across the panel
 badge.mode(SS_X4)
@@ -20,7 +20,7 @@ screen.font = font.ark
 SCALE = display.SCALE
 
 # find installed apps and create apps
-apps = Apps("/system/apps")
+apps = Apps("/apps")
 
 badge.poll()
 

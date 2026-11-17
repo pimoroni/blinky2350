@@ -3,8 +3,8 @@ import os
 import math
 import random
 
-sys.path.insert(0, "/system/apps/zoooom")
-os.chdir("/system/apps/zoooom")
+sys.path.insert(0, "/apps/zoooom")
+os.chdir("/apps/zoooom")
 
 screen_buffer = image(160, 120)
 screen_buffer.pen = color.rgb(255, 255, 255)

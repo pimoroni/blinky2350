@@ -2,8 +2,8 @@ import sys
 import os
 from badgeware import set_brightness, State
 
-sys.path.insert(0, "/system/apps/badge")
-os.chdir("/system/apps/badge")
+sys.path.insert(0, "/apps/badge")
+os.chdir("/apps/badge")
 
 TEXT = "Hello! I'm Blinky2350!"
 

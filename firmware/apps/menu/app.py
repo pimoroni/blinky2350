@@ -115,7 +115,7 @@ class Apps:
             set_brightness(0.2)
             # hand the panel back to launched apps at native resolution
             badge.mode(LORES)
-            return f"/system/apps/{app.path}"
+            return f"/apps/{app.path}"
 
         return None
 
