@@ -117,6 +117,21 @@ def get_exception(e):
     return s.read()
 
 
+def status(lines, pen):
+    badge.mode(LORES)
+    screen.pen = color.black
+    screen.clear()
+    screen.font = font.winds
+    screen.pen = pen
+    _, line_height = screen.measure_text(lines[0])
+    y = (screen.height - line_height * len(lines)) / 2
+    for line in lines:
+        width, _ = screen.measure_text(line)
+        screen.text(line, (screen.width - width) / 2, y)
+        y += line_height
+    display.update()
+
+
 def fatal_error(title, error):
     if not isinstance(error, str):
         error = get_exception(error)
