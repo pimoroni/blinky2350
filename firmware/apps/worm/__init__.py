@@ -1,11 +1,7 @@
-import sys
-import os
 import math
 import random
 from draw_blinky import renderer
 
-sys.path.insert(0, "/apps/worm")
-os.chdir("/apps/worm")
 
 game_renderer = renderer()
 

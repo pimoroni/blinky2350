@@ -1,9 +1,3 @@
-import sys
-import os
-
-sys.path.insert(0, "/apps/hydrate")
-os.chdir("/apps/hydrate")
-
 from badgeware import State, set_brightness
 
 CX = screen.width / 2

@@ -1,9 +1,3 @@
-import sys
-import os
-
-sys.path.insert(0, "/apps/worm")
-os.chdir("/apps/worm")
-
 small_font = font.nope
 very_small_font = font.sins
 

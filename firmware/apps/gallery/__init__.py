@@ -1,9 +1,6 @@
 import os
-import sys
 from badgeware import set_brightness
 
-sys.path.insert(0, "/apps/gallery")
-os.chdir("/apps/gallery")
 
 screen.font = font.sins
 screen.antialias = image.X2
