@@ -139,6 +139,20 @@ def status(lines, pen):
     display.update()
 
 
+def scroller(message, pen):
+    badge.mode(LORES)
+    update_text = text.scroll(message)
+
+    def draw():
+        screen.pen = color.black
+        screen.clear()
+        screen.pen = pen
+        update_text()
+        display.update()
+
+    return draw
+
+
 class IDEStop(BaseException):
     pass
 

@@ -306,13 +306,15 @@ def execute(path, debug=False):
 
 
 def _hold():
-    print("Connected: the Badgeware IDE is updating files. Press any button to cancel.")
-    badgeware.status(("IDE",), color.rgb(0, 30, 60))
+    message = "Connected: the Badgeware IDE is updating files. Press any button to cancel."
+    print(message)
+    draw = badgeware.scroller(message, color.rgb(0, 30, 60))
     while cdcaux.held():
         badge.poll()
         if badge.pressed():
             cdcaux.release()
             break
+        draw()
         time.sleep_ms(20)
     while badge.pressed() or badge.held():
         badge.poll()

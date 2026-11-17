@@ -1,11 +1,17 @@
+import time
+
 import ide
 import powman
-from badgeware import status
+from badgeware import scroller
 
 
 def safe_mode():
-    print("Safe Mode: connect to the Badgeware IDE to repair your badge. Press RESET to restart.")
-    status(("SAFE", "MODE"), color.rgb(60, 35, 0))
+    message = "Safe Mode: connect to the Badgeware IDE to repair your badge. Press RESET to restart."
+    print(message)
+    draw = scroller(message, color.rgb(60, 35, 0))
+    while True:
+        draw()
+        time.sleep_ms(20)
 
 
 ide.serve()
