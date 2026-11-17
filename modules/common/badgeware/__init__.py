@@ -3,6 +3,7 @@ from io import StringIO
 import sys
 import os
 
+import cdcaux
 import machine
 import micropython
 import blinky
@@ -68,6 +69,8 @@ class _run:
 
 
 def launch(path):
+    cdcaux.app(path)
+
     def do_exit():
         if path in sys.modules:
             app = sys.modules[path]
