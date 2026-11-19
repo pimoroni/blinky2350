@@ -1,23 +1,10 @@
-import time
-
 import ide
 import powman
-from badgeware import scroller
-
-
-def safe_mode():
-    message = "Safe Mode: connect to the Badgeware IDE to repair your badge. Press RESET to restart."
-    print(message)
-    draw = scroller(message, color.rgb(60, 35, 0))
-    while True:
-        draw()
-        time.sleep_ms(20)
-
 
 ide.serve()
 
 if powman.get_wake_reason() == powman.WAKE_DOUBLETAP:
-    safe_mode()
+    ide.safe_mode()
 
 else:
     try:
